@@ -9,7 +9,8 @@ export default function QuickEntry({
   activeVault,
   onShowToast,
   categories = categoriesList,
-  macroTypes = macroTypesList
+  macroTypes = macroTypesList,
+  members = []
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSmsBox, setShowSmsBox] = useState(false);
@@ -57,6 +58,9 @@ export default function QuickEntry({
       return;
     }
 
+    const currentMember = members.find(m => m.username === activeUser);
+    const authorName = currentMember ? currentMember.name : (activeUser === 'nhut' ? 'Nhựt' : 'Trang');
+
     const newTx = {
       id: 'tx-' + Date.now(),
       ngay: confirmingQuickItem.ngay,
@@ -67,7 +71,7 @@ export default function QuickEntry({
       phan_loai: confirmingQuickItem.phan_loai,
       loai: confirmingQuickItem.loai,
       vault: confirmingQuickItem.vault,
-      author: activeUser === 'nhut' ? 'Nhựt' : 'Trang',
+      author: authorName,
       ghi_chu: confirmingQuickItem.ghi_chu || 'Thêm nhanh thường dùng'
     };
 
@@ -84,6 +88,9 @@ export default function QuickEntry({
       return;
     }
 
+    const currentMember = members.find(m => m.username === activeUser);
+    const authorName = currentMember ? currentMember.name : (activeUser === 'nhut' ? 'Nhựt' : 'Trang');
+
     const newTx = {
       id: 'tx-' + Date.now(),
       ngay: formData.ngay || new Date().toISOString().split('T')[0],
@@ -94,7 +101,7 @@ export default function QuickEntry({
       phan_loai: formData.phan_loai,
       loai: formData.loai,
       vault: formData.vault,
-      author: activeUser === 'nhut' ? 'Nhựt' : 'Trang',
+      author: authorName,
       ghi_chu: formData.ghi_chu.trim()
     };
 
@@ -405,7 +412,7 @@ export default function QuickEntry({
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">Người ghi:</span>
                 <span className="font-medium text-slate-700">
-                  {activeUser === 'nhut' ? 'Nhựt' : 'Trang'}
+                  {members.find(m => m.username === activeUser)?.name || (activeUser === 'nhut' ? 'Nhựt' : 'Trang')}
                 </span>
               </div>
             </div>

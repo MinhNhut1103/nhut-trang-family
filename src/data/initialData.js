@@ -4,6 +4,27 @@ export const initialProfile = {
   activeVault: 'shared', // 'shared' | 'personal'
 };
 
+export const initialMembers = [
+  {
+    id: 'm-1',
+    username: 'nhut',
+    name: 'Nhựt',
+    role: 'Chủ gia đình',
+    pin: '1103',
+    vault: 'personal_nhut',
+    color: 'emerald'
+  },
+  {
+    id: 'm-2',
+    username: 'trang',
+    name: 'Trang',
+    role: 'Đồng quản lý',
+    pin: '1234',
+    vault: 'personal_trang',
+    color: 'pink'
+  }
+];
+
 export const initialMonthlyConfig = {
   id: '2026-10',
   banner_focus: '',

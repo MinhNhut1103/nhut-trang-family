@@ -3,8 +3,10 @@ import {
   Eye, 
   EyeSlash, 
   Database, 
-  X,
-  Check
+  X, 
+  Check, 
+  Users, 
+  SignOut 
 } from '@phosphor-icons/react';
 import { isSupabaseConfigured } from '../supabaseClient';
 
@@ -12,7 +14,11 @@ export default function Header({
   activeUser, 
   setActiveUser, 
   privacyMode, 
-  setPrivacyMode 
+  setPrivacyMode,
+  members = [],
+  currentUser,
+  onLogout,
+  onOpenMemberManager
 }) {
   const [showConfigModal, setShowConfigModal] = useState(false);
 
@@ -40,13 +46,13 @@ export default function Header({
           </div>
         </div>
 
-        {/* Khu vực chọn người ghi & cài đặt */}
+        {/* Khu vực chọn người ghi & quản lý thành viên & cài đặt */}
         <div className="flex items-center gap-2">
           
           {/* Trạng thái Cloud */}
           <button
             onClick={() => setShowConfigModal(true)}
-            className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border tactile-btn transition-colors ${
+            className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border tactile-btn transition-colors hidden sm:block ${
               isSupabaseConfigured
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -55,29 +61,36 @@ export default function Header({
             {isSupabaseConfigured ? 'Đã nối Supabase' : 'Lưu trên máy'}
           </button>
 
-          {/* Chọn người ghi */}
-          <div className="flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200">
-            <button
-              onClick={() => setActiveUser('nhut')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold tactile-btn transition-all ${
-                activeUser === 'nhut'
-                  ? 'bg-white text-emerald-800 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Nhựt
-            </button>
-            <button
-              onClick={() => setActiveUser('trang')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold tactile-btn transition-all ${
-                activeUser === 'trang'
-                  ? 'bg-white text-pink-700 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Trang
-            </button>
-          </div>
+          {/* Chọn nhanh người ghi theo danh sách thành viên */}
+          {members.length > 0 && (
+            <div className="flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200">
+              {members.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setActiveUser(m.username)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold tactile-btn transition-all ${
+                    activeUser === m.username
+                      ? m.color === 'pink'
+                        ? 'bg-white text-pink-700 shadow-xs'
+                        : 'bg-white text-emerald-800 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title={`${m.name} (${m.role || 'Thành viên'})`}
+                >
+                  {m.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Nút Quản lý thành viên */}
+          <button
+            onClick={onOpenMemberManager}
+            className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 tactile-btn transition-colors"
+            title="Quản lý thành viên gia đình"
+          >
+            <Users size={16} weight="bold" />
+          </button>
 
           {/* Nút ẩn số tiền */}
           <button
@@ -90,6 +103,15 @@ export default function Header({
             title={privacyMode ? 'Đang che số tiền' : 'Ẩn số tiền'}
           >
             {privacyMode ? <EyeSlash size={16} weight="bold" /> : <Eye size={16} weight="bold" />}
+          </button>
+
+          {/* Nút Đăng xuất */}
+          <button
+            onClick={onLogout}
+            className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 tactile-btn transition-colors"
+            title="Đăng xuất khỏi sổ"
+          >
+            <SignOut size={16} weight="bold" />
           </button>
         </div>
 

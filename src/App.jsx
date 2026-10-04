@@ -9,7 +9,8 @@ import {
   initialMonthlyConfig,
   categoriesList,
   macroTypesList,
-  getRandomTime
+  getRandomTime,
+  initialMembers
 } from './data/initialData';
 import { 
   isSupabaseConfigured, 
@@ -21,6 +22,8 @@ import {
   updateMonthlyFocus 
 } from './supabaseClient';
 import CategoryManagerModal from './components/CategoryManagerModal';
+import MemberManagerModal from './components/MemberManagerModal';
+import LoginForm from './components/LoginForm';
 import { Check } from '@phosphor-icons/react';
 
 export default function App() {
@@ -69,6 +72,20 @@ export default function App() {
   });
 
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+
+  // Quản lý thành viên gia đình
+  const [members, setMembers] = useState(() => {
+    const saved = localStorage.getItem('nt_family_members');
+    return saved ? JSON.parse(saved) : initialMembers;
+  });
+
+  // Trạng thái tài khoản đang đăng nhập (chỉ có form đăng nhập)
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('nt_auth_user') || sessionStorage.getItem('nt_auth_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [isMemberManagerOpen, setIsMemberManagerOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -126,6 +143,10 @@ export default function App() {
     localStorage.setItem('nt_macro_types', JSON.stringify(macroTypes));
   }, [macroTypes]);
 
+  useEffect(() => {
+    localStorage.setItem('nt_family_members', JSON.stringify(members));
+  }, [members]);
+
   // Thông báo nhẹ
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -176,6 +197,51 @@ export default function App() {
     showToast(`Đã xóa loại: ${type}`);
   };
 
+  // Đăng nhập & Đăng xuất
+  const handleLoginSuccess = (member, remember) => {
+    setCurrentUser(member);
+    setActiveUser(member.username);
+    if (remember) {
+      localStorage.setItem('nt_auth_user', JSON.stringify(member));
+    } else {
+      sessionStorage.setItem('nt_auth_user', JSON.stringify(member));
+    }
+    showToast(`Chào mừng ${member.name} đã đăng nhập!`);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('nt_auth_user');
+    sessionStorage.removeItem('nt_auth_user');
+    setCurrentUser(null);
+    showToast('Đã đăng xuất khỏi tài khoản');
+  };
+
+  // Quản lý thành viên gia đình
+  const handleAddMember = (newMember) => {
+    setMembers((prev) => [...prev, newMember]);
+    showToast(`Đã thêm thành viên: ${newMember.name}`);
+  };
+
+  const handleUpdateMember = (id, updates) => {
+    setMembers((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
+    );
+    if (currentUser?.id === id) {
+      const updatedUser = { ...currentUser, ...updates };
+      setCurrentUser(updatedUser);
+      if (localStorage.getItem('nt_auth_user')) {
+        localStorage.setItem('nt_auth_user', JSON.stringify(updatedUser));
+      }
+    }
+    showToast('Đã cập nhật thông tin thành viên');
+  };
+
+  const handleDeleteMember = (id) => {
+    const memberToDelete = members.find((m) => m.id === id);
+    setMembers((prev) => prev.filter((m) => m.id !== id));
+    showToast(`Đã xóa thành viên: ${memberToDelete?.name || ''}`);
+  };
+
   // Thêm giao dịch
   const handleAddTransaction = async (newTx) => {
     setTransactions((prev) => [newTx, ...prev]);
@@ -218,6 +284,26 @@ export default function App() {
     }
   };
 
+  // NẾU CHƯA ĐĂNG NHẬP: CHỈ HIỂN THỊ DUY NHẤT FORM ĐĂNG NHẬP (KHÔNG CÓ ĐĂNG KÝ, KHÔNG CÓ QUÊN MẬT KHẨU)
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC]">
+        {toastMessage && (
+          <div className="fixed bottom-5 right-5 z-50 animate-fade-in">
+            <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-medium shadow-lg">
+              <Check size={15} weight="bold" className="text-emerald-400 shrink-0" />
+              <span>{toastMessage}</span>
+            </div>
+          </div>
+        )}
+        <LoginForm 
+          members={members} 
+          onLoginSuccess={handleLoginSuccess} 
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col justify-between">
       
@@ -245,6 +331,17 @@ export default function App() {
         onDeleteMacroType={handleDeleteMacroType}
       />
 
+      {/* Modal Quản lý Thành viên Gia Đình */}
+      <MemberManagerModal
+        isOpen={isMemberManagerOpen}
+        onClose={() => setIsMemberManagerOpen(false)}
+        members={members}
+        onAddMember={handleAddMember}
+        onUpdateMember={handleUpdateMember}
+        onDeleteMember={handleDeleteMember}
+        currentUserId={currentUser.id}
+      />
+
       {/* Nội dung chính */}
       <main>
         {/* Đầu trang */}
@@ -253,6 +350,10 @@ export default function App() {
           setActiveUser={setActiveUser}
           privacyMode={privacyMode}
           setPrivacyMode={setPrivacyMode}
+          members={members}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          onOpenMemberManager={() => setIsMemberManagerOpen(true)}
         />
 
         {/* Tổng quan tháng 10 */}
@@ -274,6 +375,7 @@ export default function App() {
           onShowToast={showToast}
           categories={categories}
           macroTypes={macroTypes}
+          members={members}
         />
 
         {/* Bảng sổ kế toán chuẩn Google Sheets */}
