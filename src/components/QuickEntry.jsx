@@ -216,41 +216,26 @@ export default function QuickEntry({
       <div className="card-soft p-4 md:p-5">
         
         {/* Nút bấm nhanh thường dùng */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-700">
-              Thêm nhanh thường dùng:
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsAddingPreset(true)}
-              className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-200/60 flex items-center gap-1 transition-colors"
-              title="Tự tạo mục chi tiêu thường dùng"
-            >
-              <Plus size={11} weight="bold" />
-              <span>Thêm mục</span>
-            </button>
+        <div className="flex flex-col gap-2.5 mb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-700">
+                Thêm nhanh thường dùng:
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsAddingPreset(true)}
+                className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-200/60 flex items-center gap-1 transition-colors"
+                title="Tự tạo mục chi tiêu thường dùng"
+              >
+                <Plus size={12} weight="bold" />
+                <span>Thêm mục</span>
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowSmsBox(!showSmsBox)}
-              className="text-xs text-slate-500 hover:text-slate-800 underline"
-            >
-              {showSmsBox ? 'Đóng hộp tin nhắn' : 'Dán tin nhắn ngân hàng'}
-            </button>
-            <span>•</span>
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
-            >
-              <span>{isExpanded ? 'Thu gọn biểu mẫu' : 'Mở biểu mẫu nhập chi tiết'}</span>
-              {isExpanded ? <CaretUp size={13} /> : <CaretDown size={13} />}
-            </button>
-          </div>
-        </div>
 
-        {/* Danh sách nút bấm nhanh */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {/* Danh sách nút bấm nhanh */}
+          <div className="flex flex-wrap items-center gap-2">
           {quickList.length === 0 ? (
             <div className="text-xs text-slate-400 py-1 flex items-center gap-2">
               <span>Chưa có mục mẫu sẵn.</span>
@@ -285,6 +270,27 @@ export default function QuickEntry({
             ))
           )}
         </div>
+
+        {/* Hàng hành động bổ sung: dán sms và mở biểu mẫu (xuống hàng riêng, thoáng đãng) */}
+        <div className="flex items-center gap-3 pt-2 pb-1 text-xs border-t border-slate-100 text-slate-500">
+          <button
+            type="button"
+            onClick={() => setShowSmsBox(!showSmsBox)}
+            className="hover:text-slate-800 underline"
+          >
+            {showSmsBox ? 'Đóng hộp tin nhắn' : 'Dán tin nhắn ngân hàng'}
+          </button>
+          <span>•</span>
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+          >
+            <span>{isExpanded ? 'Thu gọn biểu mẫu' : 'Mở biểu mẫu nhập chi tiết'}</span>
+            {isExpanded ? <CaretUp size={13} /> : <CaretDown size={13} />}
+          </button>
+        </div>
+      </div>
 
         {/* Hộp dán tin nhắn ngân hàng */}
         {showSmsBox && (

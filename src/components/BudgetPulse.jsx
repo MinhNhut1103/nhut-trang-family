@@ -46,88 +46,114 @@ export default function BudgetPulse({
   return (
     <section className="w-full max-w-5xl mx-auto px-4 md:px-8 pt-4 pb-2">
       
-      {/* 1. THANH CHUYỂN THÁNG & QUẢN LÝ THÁNG (DẠNG HÀNG 100% TRỰC QUAN) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-        {/* Bộ điều hướng tháng 100% trên mobile */}
-        <div className="w-full sm:w-auto flex items-center justify-between bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs">
-          <button
-            type="button"
-            onClick={() => onSelectMonth && onSelectMonth(getPrevMonth(currentMonth))}
-            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors tactile-btn"
-            title="Tháng trước"
-          >
-            <CaretLeft size={18} weight="bold" />
-          </button>
+      {/* 1. THANH CHUYỂN THÁNG (100% HÀNG RIÊNG) */}
+      <div className="w-full flex items-center justify-between bg-white border border-slate-200/90 rounded-2xl p-1.5 shadow-2xs mb-2">
+        <button
+          type="button"
+          onClick={() => onSelectMonth && onSelectMonth(getPrevMonth(currentMonth))}
+          className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors tactile-btn"
+          title="Tháng trước"
+        >
+          <CaretLeft size={18} weight="bold" />
+        </button>
 
-          <button
-            type="button"
-            onClick={onOpenMonthManager}
-            className="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold text-slate-800 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center gap-1.5"
-            title="Bấm để mở Quản lý tháng & Ghi chú"
-          >
-            <Calendar size={16} weight="bold" className="text-emerald-700" />
-            <span>{currentMonthLabel}</span>
-          </button>
+        <button
+          type="button"
+          onClick={onOpenMonthManager}
+          className="px-3 py-1.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center gap-2"
+          title="Bấm để mở Quản lý tháng & Ghi chú"
+        >
+          <Calendar size={17} weight="bold" className="text-emerald-700" />
+          <span>{currentMonthLabel}</span>
+          <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+            {transactions.length} giao dịch
+          </span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => onSelectMonth && onSelectMonth(getNextMonth(currentMonth))}
-            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors tactile-btn"
-            title="Tháng tiếp theo"
-          >
-            <CaretRight size={18} weight="bold" />
-          </button>
-        </div>
-
-        {/* Nút Quản lý tháng & Thống kê số lượng (100% trên mobile) */}
-        <div className="w-full sm:w-auto flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={onOpenMonthManager}
-            className="flex-1 sm:flex-none text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-200/80 px-3 py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-2xs tactile-btn"
-          >
-            <Note size={15} weight="bold" />
-            <span>Quản lý tháng & Ghi chú</span>
-          </button>
-
-          <div className="text-xs text-slate-600 font-medium bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs tabular-nums shrink-0">
-            <strong className="text-slate-800">{transactions.length}</strong> giao dịch
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => onSelectMonth && onSelectMonth(getNextMonth(currentMonth))}
+          className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors tactile-btn"
+          title="Tháng tiếp theo"
+        >
+          <CaretRight size={18} weight="bold" />
+        </button>
       </div>
 
-      {/* 2. TÓM TẮT 3 CON SỐ: TỔNG THU - TỔNG CHI - CÒN LẠI */}
-      <div className="grid grid-cols-3 gap-2 md:gap-3 mb-3">
+      {/* 2. NÚT QUẢN LÝ THÁNG (100% HÀNG RIÊNG XUỐNG HÀNG) */}
+      <div className="w-full mb-3">
+        <button
+          type="button"
+          onClick={onOpenMonthManager}
+          className="w-full py-2.5 px-3 bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-200/80 rounded-xl text-xs sm:text-sm font-semibold text-emerald-800 flex items-center justify-center gap-2 shadow-2xs transition-colors tactile-btn"
+        >
+          <Note size={16} weight="bold" className="text-emerald-700" />
+          <span>Quản lý tháng & Ghi chú chốt sổ</span>
+        </button>
+      </div>
+
+      {/* 3. TỔNG THU - TỔNG CHI - CHÊNH LỆCH (XUỐNG HÀNG 100% TỪNG DÒNG, KHÔNG CHIA CỘT NGANG) */}
+      <div className="card-soft overflow-hidden mb-3 divide-y divide-slate-100 shadow-2xs border border-slate-200/90">
         
-        {/* Thu */}
-        <div className="card-soft p-2.5 sm:p-3.5 md:p-4 text-center">
-          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-0.5 sm:mb-1">
-            Tổng Thu
-          </span>
-          <div className="text-xs sm:text-base md:text-xl font-bold text-emerald-700 tabular-nums">
-            +{formatMoney(totalThu)}
+        {/* HÀNG 1: TỔNG THU (100% WIDTH) */}
+        <div className="flex items-center justify-between p-3 sm:p-3.5 bg-white hover:bg-slate-50/60 transition-colors">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+              <ArrowUpRight size={18} weight="bold" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-slate-700 block">Tổng Thu</span>
+              <span className="text-[11px] text-slate-400">Tất cả nguồn thu trong tháng</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-sm sm:text-lg font-bold text-emerald-700 tabular-nums">
+              +{formatMoney(totalThu)}
+            </span>
           </div>
         </div>
 
-        {/* Chi */}
-        <div className="card-soft p-2.5 sm:p-3.5 md:p-4 text-center">
-          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-0.5 sm:mb-1">
-            Tổng Chi
-          </span>
-          <div className="text-xs sm:text-base md:text-xl font-bold text-rose-600 tabular-nums">
-            -{formatMoney(totalChi)}
+        {/* HÀNG 2: TỔNG CHI (100% WIDTH) */}
+        <div className="flex items-center justify-between p-3 sm:p-3.5 bg-white hover:bg-slate-50/60 transition-colors">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+              <ArrowDownRight size={18} weight="bold" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-slate-700 block">Tổng Chi</span>
+              <span className="text-[11px] text-slate-400">Tất cả khoản đã tiêu</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-sm sm:text-lg font-bold text-rose-600 tabular-nums">
+              -{formatMoney(totalChi)}
+            </span>
           </div>
         </div>
 
-        {/* Còn lại */}
-        <div className="card-soft p-2.5 sm:p-3.5 md:p-4 text-center bg-slate-50/50">
-          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-0.5 sm:mb-1">
-            Chênh Lệch
-          </span>
-          <div className={`text-xs sm:text-base md:text-xl font-bold tabular-nums ${
-            netBalance >= 0 ? 'text-emerald-700' : 'text-rose-600'
-          }`}>
-            {netBalance >= 0 ? '+' : ''}{formatMoney(netBalance)}
+        {/* HÀNG 3: CHÊNH LỆCH / THẶNG DƯ (100% WIDTH) */}
+        <div className={`flex items-center justify-between p-3 sm:p-3.5 transition-colors ${
+          netBalance >= 0 ? 'bg-emerald-50/40' : 'bg-rose-50/40'
+        }`}>
+          <div className="flex items-center gap-2.5">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+              netBalance >= 0 ? 'bg-emerald-200/80 text-emerald-800' : 'bg-rose-200/80 text-rose-800'
+            }`}>
+              <Wallet size={18} weight="bold" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-slate-800 block">
+                Chênh Lệch {netBalance >= 0 ? '(Thặng dư)' : '(Thâm hụt)'}
+              </span>
+              <span className="text-[11px] text-slate-500">Số dư thực tế sau khi trừ chi</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className={`text-base sm:text-xl font-extrabold tabular-nums ${
+              netBalance >= 0 ? 'text-emerald-700' : 'text-rose-600'
+            }`}>
+              {netBalance >= 0 ? '+' : ''}{formatMoney(netBalance)}
+            </span>
           </div>
         </div>
 
