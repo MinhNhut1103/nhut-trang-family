@@ -389,11 +389,38 @@ export default function QuickEntry({
                 </div>
               </div>
 
+              {/* Phân loại */}
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">Phân loại & Loại:</span>
-                <span className="font-medium text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200/80">
-                  {confirmingQuickItem.phan_loai} • {confirmingQuickItem.loai}
-                </span>
+                <span className="text-slate-500">Phân loại:</span>
+                <select
+                  value={confirmingQuickItem.phan_loai}
+                  onChange={(e) => setConfirmingQuickItem({
+                    ...confirmingQuickItem,
+                    phan_loai: e.target.value
+                  })}
+                  className="bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-emerald-600 font-medium"
+                >
+                  {(categories.includes(confirmingQuickItem.phan_loai) ? categories : [confirmingQuickItem.phan_loai, ...categories]).map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Loại */}
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Loại:</span>
+                <select
+                  value={confirmingQuickItem.loai}
+                  onChange={(e) => setConfirmingQuickItem({
+                    ...confirmingQuickItem,
+                    loai: e.target.value
+                  })}
+                  className="bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-emerald-600 font-medium"
+                >
+                  {(macroTypes.includes(confirmingQuickItem.loai) ? macroTypes : [confirmingQuickItem.loai, ...macroTypes]).map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Chọn ví */}
