@@ -1,5 +1,15 @@
 import React from 'react';
-import { CaretLeft, CaretRight, Calendar, Note, PencilSimple, Target } from '@phosphor-icons/react';
+import { 
+  CaretLeft, 
+  CaretRight, 
+  Calendar, 
+  Note, 
+  PencilSimple, 
+  Target, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Wallet 
+} from '@phosphor-icons/react';
 
 export default function BudgetPulse({ 
   transactions = [], 
