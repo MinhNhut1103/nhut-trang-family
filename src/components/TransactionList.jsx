@@ -90,17 +90,85 @@ export default function TransactionList({
     }
   };
 
+  // Chuẩn hóa định dạng ngày (hỗ trợ cả YYYY-MM-DD, ISO string và DD/MM/YYYY)
+  const normalizeDate = (dStr) => {
+    if (!dStr) return null;
+    const clean = dStr.split('T')[0].trim();
+    if (clean.includes('-')) {
+      const parts = clean.split('-');
+      if (parts.length >= 3) {
+        return {
+          year: parts[0],
+          month: String(Number(parts[1])).padStart(2, '0'),
+          day: String(Number(parts[2])).padStart(2, '0'),
+          iso: `${parts[0]}-${String(Number(parts[1])).padStart(2, '0')}-${String(Number(parts[2])).padStart(2, '0')}`
+        };
+      }
+    } else if (clean.includes('/')) {
+      const parts = clean.split('/');
+      if (parts.length >= 3) {
+        const fullYear = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+        return {
+          year: fullYear,
+          month: String(Number(parts[1])).padStart(2, '0'),
+          day: String(Number(parts[0])).padStart(2, '0'),
+          iso: `${fullYear}-${String(Number(parts[1])).padStart(2, '0')}-${String(Number(parts[0])).padStart(2, '0')}`
+        };
+      }
+    }
+    return null;
+  };
+
+  // So khớp ngày thông minh (khớp Ngày và Tháng, bỏ qua lệch năm của lịch thiết bị)
+  const isMatchingDate = (txDateStr, selectedFilterDate) => {
+    if (!selectedFilterDate) return true;
+    const txNorm = normalizeDate(txDateStr);
+    const filterNorm = normalizeDate(selectedFilterDate);
+    if (!txNorm || !filterNorm) {
+      return (txDateStr || '').includes(selectedFilterDate);
+    }
+    return txNorm.day === filterNorm.day && txNorm.month === filterNorm.month;
+  };
+
+  // Danh sách các ngày có dữ liệu phát sinh trong tháng đang chọn
+  const availableDaysInScope = React.useMemo(() => {
+    const dayMap = {};
+    transactions.forEach((t) => {
+      const norm = normalizeDate(t.ngay);
+      if (!norm) return;
+
+      // Giới hạn theo tháng đang chọn
+      if (filterMonth === 'current') {
+        if (currentMonth && !norm.iso.startsWith(currentMonth)) return;
+      } else if (filterMonth !== 'all') {
+        if (!norm.iso.startsWith(filterMonth)) return;
+      }
+
+      if (!dayMap[norm.iso]) {
+        dayMap[norm.iso] = {
+          iso: norm.iso,
+          label: `Ngày ${norm.day}/${norm.month}`,
+          count: 0
+        };
+      }
+      dayMap[norm.iso].count += 1;
+    });
+
+    return Object.values(dayMap).sort((a, b) => a.iso.localeCompare(b.iso));
+  }, [transactions, filterMonth, currentMonth]);
+
   // Lọc dữ liệu theo ngày, tháng, phân loại, loại, từ khóa
   const filteredList = transactions.filter((tx) => {
     // 1. Lọc theo ngày cụ thể (nếu người dùng chọn ngày)
     if (filterDate) {
-      if (tx.ngay !== filterDate) return false;
+      if (!isMatchingDate(tx.ngay, filterDate)) return false;
     } else {
       // Nếu không chọn ngày cụ thể thì lọc theo tháng
+      const norm = normalizeDate(tx.ngay);
       if (filterMonth === 'current') {
-        if (currentMonth && !(tx.ngay || '').startsWith(currentMonth)) return false;
+        if (currentMonth && norm && !norm.iso.startsWith(currentMonth)) return false;
       } else if (filterMonth !== 'all') {
-        if (!(tx.ngay || '').startsWith(filterMonth)) return false;
+        if (norm && !norm.iso.startsWith(filterMonth)) return false;
       }
     }
 
@@ -312,25 +380,42 @@ export default function TransactionList({
                 })}
             </select>
 
-            {/* 2. LỌC THEO NGÀY CỤ THỂ (DATE PICKER) */}
+            {/* 2. LỌC THEO NGÀY (CẢ DROPDOWN CHỌN NGÀY VÀ DATE PICKER) */}
             <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1 shadow-2xs">
-              <Calendar size={14} className="text-emerald-700 shrink-0" weight="bold" />
-              <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">Ngày:</span>
+              <Calendar size={15} className="text-emerald-700 shrink-0" weight="bold" />
+              
+              {/* Dropdown danh sách các ngày có dữ liệu phát sinh */}
+              <select
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="text-xs text-slate-800 font-semibold focus:outline-none bg-transparent cursor-pointer max-w-[145px] sm:max-w-[180px]"
+                title="Chọn ngày nhanh từ danh sách"
+              >
+                <option value="">Tất cả các ngày</option>
+                {availableDaysInScope.map((d) => (
+                  <option key={d.iso} value={d.iso}>
+                    {d.label} ({d.count} khoản)
+                  </option>
+                ))}
+              </select>
+
+              {/* Input Date Picker kèm theo để người dùng tự chọn bất kỳ ngày nào trên lịch */}
               <input
                 type="date"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="text-xs text-slate-800 font-medium focus:outline-none bg-transparent cursor-pointer"
-                title="Chọn ngày cụ thể để lọc"
+                className="text-xs text-slate-500 focus:outline-none bg-transparent cursor-pointer w-6 sm:w-auto"
+                title="Hoặc bấm để mở lịch chọn ngày"
               />
+
               {filterDate && (
                 <button
                   type="button"
                   onClick={() => setFilterDate('')}
-                  className="text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                  className="text-slate-400 hover:text-rose-600 p-0.5 rounded-full transition-colors"
                   title="Xóa lọc theo ngày"
                 >
-                  <X size={12} weight="bold" />
+                  <X size={13} weight="bold" />
                 </button>
               )}
             </div>
