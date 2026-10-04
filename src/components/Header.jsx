@@ -2,214 +2,141 @@ import React, { useState } from 'react';
 import { 
   Eye, 
   EyeSlash, 
-  UsersThree, 
-  LockKey, 
   Database, 
-  Heart,
-  Sparkle,
   X,
-  House
+  Check
 } from '@phosphor-icons/react';
 import { isSupabaseConfigured } from '../supabaseClient';
 
 export default function Header({ 
   activeUser, 
   setActiveUser, 
-  activeVault, 
-  setActiveVault, 
   privacyMode, 
   setPrivacyMode 
 }) {
   const [showConfigModal, setShowConfigModal] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel-elevated border-b border-white/[0.08] px-4 lg:px-8 py-3.5 transition-all">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3.5">
+    <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-8 py-3">
+      <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
         
-        {/* Brand & Subtitle & Cloud Status */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-amber-500 p-[1.5px] shadow-lg shadow-emerald-950/30">
-              <div className="w-full h-full bg-[#0E111A] rounded-[14px] flex items-center justify-center text-white font-bold text-sm tracking-widest">
-                NT
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base md:text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
-                  Nhựt & Trang
-                </h1>
-                <span className="text-[10px] font-semibold tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 flex items-center gap-1">
-                  <House size={11} weight="fill" />
-                  Tổ Ấm
-                </span>
-
-                {/* Cloud Status Pill */}
-                <button
-                  onClick={() => setShowConfigModal(true)}
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 tactile-btn border transition-all ${
-                    isSupabaseConfigured
-                      ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
-                      : 'bg-amber-950/30 text-amber-300 border-amber-500/30'
-                  }`}
-                  title="Xem trạng thái kết nối Supabase Cloud"
-                >
-                  <Database size={11} weight={isSupabaseConfigured ? 'fill' : 'regular'} />
-                  <span>{isSupabaseConfigured ? 'Supabase Live' : 'Supabase Sẵn Sàng'}</span>
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                <span>Tài chính gia đình ấm áp</span>
-                <span>•</span>
-                <span className="text-amber-400/90 font-medium">Bình yên & Vun đắp</span>
-              </p>
-            </div>
+        {/* Tên ứng dụng */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-700 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+            NT
           </div>
-
-          {/* Privacy Toggle on mobile */}
-          <div className="md:hidden flex items-center gap-2">
-            <button
-              onClick={() => setPrivacyMode(!privacyMode)}
-              className={`p-2.5 rounded-2xl border tactile-btn transition-colors ${
-                privacyMode 
-                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' 
-                  : 'bg-slate-800/60 border-slate-700/60 text-slate-300'
-              }`}
-            >
-              {privacyMode ? <EyeSlash size={16} weight="bold" /> : <Eye size={16} weight="bold" />}
-            </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-slate-900 tracking-tight">
+                Sổ Thu Chi Gia Đình
+              </h1>
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Nhựt & Trang
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 hidden sm:block">
+              Quản lý tài chính tháng 10/2026
+            </p>
           </div>
         </div>
 
-        {/* Center: Apple-style Vault Pill Switcher */}
-        <div className="flex items-center justify-center">
-          <div className="inline-flex p-1.5 bg-slate-900/90 rounded-2xl border border-white/[0.08] shadow-inner backdrop-blur-xl">
-            <button
-              onClick={() => setActiveVault('shared')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold tactile-btn transition-all ${
-                activeVault === 'shared'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-950/50'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <UsersThree size={16} weight={activeVault === 'shared' ? 'fill' : 'regular'} />
-              <span>🌿 Quỹ Chung Tổ Ấm</span>
-            </button>
+        {/* Khu vực chọn người ghi & cài đặt */}
+        <div className="flex items-center gap-2">
+          
+          {/* Trạng thái Cloud */}
+          <button
+            onClick={() => setShowConfigModal(true)}
+            className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border tactile-btn transition-colors ${
+              isSupabaseConfigured
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}
+          >
+            {isSupabaseConfigured ? 'Đã nối Supabase' : 'Lưu trên máy'}
+          </button>
 
-            <button
-              onClick={() => setActiveVault('personal')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold tactile-btn transition-all ${
-                activeVault === 'personal'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-950/50'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <LockKey size={16} weight={activeVault === 'personal' ? 'fill' : 'regular'} />
-              <span>🔒 Ví Riêng ({activeUser === 'nhut' ? 'Nhựt' : 'Trang'})</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Right: Active Profile & Privacy Pill */}
-        <div className="flex items-center justify-between md:justify-end gap-2.5">
-          <div className="flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-white/[0.08]">
-            <span className="text-[11px] text-slate-400 pl-2 pr-1 font-medium">Bạn là:</span>
+          {/* Chọn người ghi */}
+          <div className="flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200">
             <button
               onClick={() => setActiveUser('nhut')}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold tactile-btn transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold tactile-btn transition-all ${
                 activeUser === 'nhut'
-                  ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-emerald-800 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              👨‍💻 Nhựt
+              Nhựt
             </button>
             <button
               onClick={() => setActiveUser('trang')}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold tactile-btn transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold tactile-btn transition-all ${
                 activeUser === 'trang'
-                  ? 'bg-slate-800 text-pink-400 border border-pink-500/30 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-pink-700 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              👩‍🦰 Trang
+              Trang
             </button>
           </div>
 
+          {/* Nút ẩn số tiền */}
           <button
             onClick={() => setPrivacyMode(!privacyMode)}
-            className={`hidden md:flex items-center gap-1.5 px-3 py-2 rounded-2xl border text-xs font-semibold tactile-btn transition-all ${
+            className={`p-2 rounded-xl border tactile-btn transition-colors ${
               privacyMode
-                ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-                : 'bg-slate-900/80 border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/20'
+                ? 'bg-amber-50 border-amber-300 text-amber-800'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
+            title={privacyMode ? 'Đang che số tiền' : 'Ẩn số tiền'}
           >
             {privacyMode ? <EyeSlash size={16} weight="bold" /> : <Eye size={16} weight="bold" />}
-            <span>{privacyMode ? 'Đang che' : 'Ẩn số dư'}</span>
           </button>
         </div>
 
       </div>
 
-      {/* Supabase Connection Modal */}
+      {/* Hộp thoại thông tin Supabase */}
       {showConfigModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-lg glass-panel p-6 rounded-3xl border border-white/[0.12] shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-              <div className="flex items-center gap-2">
-                <Database size={20} className="text-emerald-400" />
-                <h3 className="font-bold text-white text-base">Cấu Hình Supabase Cloud</h3>
-              </div>
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm">
+                Trạng Thái Dữ Liệu
+              </h3>
               <button 
                 onClick={() => setShowConfigModal(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="text-xs text-slate-300 space-y-3 leading-relaxed">
+            <div className="text-xs text-slate-600 space-y-3 leading-relaxed">
               <p>
-                File cấu hình <strong>.env</strong> đã nhận diện kết nối Supabase của bạn.
+                Dự án đã tích hợp sẵn <strong>Supabase</strong> để đồng bộ dữ liệu thời gian thực giữa hai vợ chồng.
               </p>
-              
-              <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-white/[0.08] space-y-2">
-                <div className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                  <Sparkle size={14} weight="fill" />
-                  Bước 1: Chạy SQL Tạo Bảng (Chỉ làm 1 lần)
-                </div>
-                <p className="text-slate-400">
-                  Mở <em>SQL Editor</em> trên Dashboard Supabase, copy toàn bộ nội dung trong file <code className="text-emerald-300 bg-slate-800 px-1.5 py-0.5 rounded">supabase/schema.sql</code> và ấn <strong>Run</strong> để tạo bảng & dữ liệu mẫu từ sheet của bạn.
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <span className="font-semibold text-slate-800">Khởi tạo dữ liệu trên Supabase:</span>
+                <p className="text-slate-500">
+                  Mở mục <em>SQL Editor</em> trên trang Supabase của bạn, dán mã trong file <code>supabase/schema.sql</code> và bấm Chạy (Run).
                 </p>
               </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-white/[0.08] space-y-2">
-                <div className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                  <Sparkle size={14} weight="fill" />
-                  Bước 2: Cấu Hình Khi Deploy Lên Vercel
-                </div>
-                <p className="text-slate-400">
-                  Khi đẩy lên GitHub & Deploy lên Vercel, bạn thêm 2 biến môi trường:
-                </p>
-                <div className="bg-slate-950 p-2.5 rounded-xl text-[11px] font-mono text-emerald-300 border border-white/[0.06]">
-                  VITE_SUPABASE_URL=https://zzvfoakggchyacimkhsw.supabase.co<br />
-                  VITE_SUPABASE_ANON_KEY=eyJhbGci...
-                </div>
-              </div>
+              <p className="text-slate-500">
+                Nếu chưa kết nối mạng hoặc chưa cấu hình Supabase, hệ thống vẫn tự động lưu trữ trên bộ nhớ máy (LocalStorage) một cách an toàn.
+              </p>
             </div>
 
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setShowConfigModal(false)}
-                className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs tactile-btn shadow-md"
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white font-medium text-xs tactile-btn"
               >
-                Đã hiểu
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
-
     </header>
   );
 }

@@ -6,8 +6,7 @@ import TransactionList from './components/TransactionList';
 import { 
   initialTransactions, 
   initialProfile, 
-  initialMonthlyConfig,
-  initialGoals 
+  initialMonthlyConfig 
 } from './data/initialData';
 import { 
   isSupabaseConfigured, 
@@ -17,16 +16,16 @@ import {
   getMonthlyConfig,
   updateMonthlyFocus 
 } from './supabaseClient';
-import { Heart, CheckCircle, Database } from '@phosphor-icons/react';
+import { Check } from '@phosphor-icons/react';
 
 export default function App() {
-  // 1. Persistent State
+  // 1. Trạng thái người dùng và không gian
   const [activeUser, setActiveUser] = useState(() => {
     return localStorage.getItem('nt_active_user') || initialProfile.activeUser;
   });
 
   const [activeVault, setActiveVault] = useState(() => {
-    return localStorage.getItem('nt_active_vault') || initialProfile.activeVault;
+    return localStorage.getItem('nt_active_vault') || 'all'; // mặc định xem tất cả
   });
 
   const [privacyMode, setPrivacyMode] = useState(() => {
@@ -45,18 +44,16 @@ export default function App() {
 
   const [toastMessage, setToastMessage] = useState(null);
 
-  // 2. Fetch from Supabase on Mount if configured
+  // 2. Tự động đồng bộ Supabase Cloud nếu đã cấu hình
   useEffect(() => {
     if (isSupabaseConfigured) {
-      // Fetch cloud transactions
       getTransactions().then((cloudData) => {
         if (cloudData && cloudData.length > 0) {
           setTransactions(cloudData);
-          showToast('☁️ Đã đồng bộ dữ liệu từ Supabase Cloud!');
+          showToast('Đã đồng bộ dữ liệu từ Supabase Cloud');
         }
       });
 
-      // Fetch monthly config
       getMonthlyConfig('2026-10').then((config) => {
         if (config) {
           setMonthlyConfig(prev => ({ ...prev, ...config }));
@@ -65,7 +62,7 @@ export default function App() {
     }
   }, []);
 
-  // 3. LocalStorage Sync Fallback
+  // 3. Tự động lưu LocalStorage trên máy
   useEffect(() => {
     localStorage.setItem('nt_active_user', activeUser);
   }, [activeUser]);
@@ -89,15 +86,15 @@ export default function App() {
     localStorage.setItem('nt_transactions', JSON.stringify(transactions));
   }, [transactions]);
 
-  // Toast auto-dismiss
+  // Thông báo nhẹ
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
-    }, 3200);
+    }, 2800);
   };
 
-  // Add transaction handler (Local + Supabase)
+  // Thêm giao dịch
   const handleAddTransaction = async (newTx) => {
     setTransactions((prev) => [newTx, ...prev]);
 
@@ -105,58 +102,60 @@ export default function App() {
       try {
         await addTransaction(newTx);
       } catch (err) {
-        console.error('Supabase add error:', err);
+        console.error('Lỗi lưu Supabase:', err);
       }
     }
   };
 
-  // Delete transaction handler (Local + Supabase)
+  // Xóa giao dịch
   const handleDeleteTransaction = async (id) => {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
-    showToast('🗑️ Đã xóa mục khỏi sổ');
+    showToast('Đã xóa dòng khỏi sổ');
 
     if (isSupabaseConfigured) {
       try {
         await deleteTransaction(id);
       } catch (err) {
-        console.error('Supabase delete error:', err);
+        console.error('Lỗi xóa Supabase:', err);
       }
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#080B11] text-slate-100 flex flex-col justify-between selection:bg-emerald-500/20 selection:text-emerald-300">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col justify-between">
       
-      {/* Toast Notification */}
+      {/* Thông báo nổi nhẹ */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-slate-900 border border-emerald-500/40 shadow-2xl text-emerald-300 text-xs md:text-sm font-medium">
-            <CheckCircle size={18} weight="fill" className="text-emerald-400 shrink-0" />
+        <div className="fixed bottom-5 right-5 z-50 animate-fade-in">
+          <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-medium shadow-lg">
+            <Check size={15} weight="bold" className="text-emerald-400 shrink-0" />
             <span>{toastMessage}</span>
           </div>
         </div>
       )}
 
-      {/* Main Container */}
-      <div>
+      {/* Nội dung chính */}
+      <main>
+        {/* Đầu trang */}
         <Header
           activeUser={activeUser}
           setActiveUser={setActiveUser}
-          activeVault={activeVault}
-          setActiveVault={setActiveVault}
           privacyMode={privacyMode}
           setPrivacyMode={setPrivacyMode}
         />
 
+        {/* Tổng quan & Banner mục tiêu tháng 10 */}
         <BudgetPulse
           monthlyConfig={monthlyConfig}
           setMonthlyConfig={setMonthlyConfig}
           transactions={transactions}
           activeVault={activeVault}
+          setActiveVault={setActiveVault}
           activeUser={activeUser}
           privacyMode={privacyMode}
         />
 
+        {/* Khối nhập liệu nhanh gọn */}
         <QuickEntry
           onAddTransaction={handleAddTransaction}
           activeUser={activeUser}
@@ -164,29 +163,25 @@ export default function App() {
           onShowToast={showToast}
         />
 
+        {/* Bảng sổ kế toán chuẩn Google Sheets */}
         <TransactionList
           transactions={transactions}
           onDeleteTransaction={handleDeleteTransaction}
           privacyMode={privacyMode}
           activeVault={activeVault}
           activeUser={activeUser}
+          monthlyConfig={monthlyConfig}
         />
-      </div>
+      </main>
 
-      {/* Footer */}
-      <footer className="w-full border-t border-slate-800/80 py-6 px-4 text-center text-xs text-slate-500 mt-10">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <span>Sổ Thu Chi Gia Đình</span>
-            <strong className="text-white">Nhựt & Trang</strong>
-            <Heart size={14} className="text-rose-500" weight="fill" />
+      {/* Chân trang */}
+      <footer className="w-full border-t border-slate-200/80 py-4 px-4 text-center text-xs text-slate-400">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div>
+            Sổ thu chi gia đình Nhựt & Trang
           </div>
-          <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-            <span>Database: Supabase Postgres</span>
-            <span>•</span>
-            <span>Hosting: Vercel Ready</span>
-            <span>•</span>
-            <span className="text-emerald-400 font-medium">Taste-Skill Anti-Slop</span>
+          <div>
+            Tháng 10/2026 • Đồng bộ Supabase
           </div>
         </div>
       </footer>
