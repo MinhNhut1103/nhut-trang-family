@@ -17,17 +17,28 @@ export default function QuickEntry({
   const [smsText, setSmsText] = useState('');
   const [confirmingQuickItem, setConfirmingQuickItem] = useState(null);
 
-  // Hỗ trợ phím Esc để tắt popup xác nhận thêm nhanh
+  const [isAddingPreset, setIsAddingPreset] = useState(false);
+  const [presetForm, setPresetForm] = useState({
+    label: '',
+    amount: '',
+    phan_loai: categories[0] || 'ăn uống',
+    loai: macroTypes[0] || 'thiết yếu',
+    type: 'chi',
+    vault: 'shared'
+  });
+
+  // Hỗ trợ phím Esc để tắt popup xác nhận hoặc popup tạo mục
   useEffect(() => {
-    if (!confirmingQuickItem) return;
+    if (!confirmingQuickItem && !isAddingPreset) return;
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setConfirmingQuickItem(null);
+        setIsAddingPreset(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [confirmingQuickItem]);
+  }, [confirmingQuickItem, isAddingPreset]);
 
   const [formData, setFormData] = useState({
     ngay: new Date().toISOString().split('T')[0],
@@ -35,21 +46,59 @@ export default function QuickEntry({
     noi_dung: '',
     actionType: 'chi', // 'chi' | 'thu'
     so_tien: '',
-    phan_loai: 'ăn uống',
-    loai: 'thiết yếu',
+    phan_loai: categories[0] || 'ăn uống',
+    loai: macroTypes[0] || 'thiết yếu',
     vault: activeVault === 'all' ? 'shared' : activeVault,
     ghi_chu: ''
   });
 
-  // Mẫu nhanh dựa đúng thói quen chi tiêu
-  const quickList = [
-    { label: 'Cơm trưa', amount: 43000, phan_loai: 'ăn uống', loai: 'thiết yếu', type: 'chi', vault: 'personal_nhut' },
-    { label: 'Ăn sáng sữa đậu nành', amount: 70000, phan_loai: 'ăn uống', loai: 'thiết yếu', type: 'chi', vault: 'shared' },
-    { label: 'Cơm sườn', amount: 24000, phan_loai: 'ăn uống', loai: 'thiết yếu', type: 'chi', vault: 'personal_nhut' },
-    { label: 'Bách hóa xanh', amount: 190000, phan_loai: 'tiêu hao', loai: 'thiết yếu', type: 'chi', vault: 'shared' },
-    { label: 'Cơm nước', amount: 25000, phan_loai: 'ăn uống', loai: 'thiết yếu', type: 'chi', vault: 'shared' },
-    { label: 'Bánh', amount: 40000, phan_loai: 'ăn uống', loai: 'thiết yếu', type: 'chi', vault: 'shared' },
-  ];
+  // Danh sách mục thêm nhanh do người dùng tự quản lý (mặc định rỗng)
+  const [quickList, setQuickList] = useState(() => {
+    const saved = localStorage.getItem('nt_quick_presets');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const handleAddPresetSubmit = (e) => {
+    e.preventDefault();
+    const num = Number(String(presetForm.amount).replace(/\D/g, '')) || 0;
+    if (!presetForm.label.trim() || num <= 0) {
+      alert('Vui lòng nhập tên mục và số tiền hợp lệ!');
+      return;
+    }
+
+    const newPreset = {
+      label: presetForm.label.trim(),
+      amount: num,
+      phan_loai: presetForm.phan_loai,
+      loai: presetForm.loai,
+      type: presetForm.type || 'chi',
+      vault: presetForm.vault || 'shared'
+    };
+
+    const updated = [...quickList, newPreset];
+    setQuickList(updated);
+    localStorage.setItem('nt_quick_presets', JSON.stringify(updated));
+    if (onShowToast) onShowToast(`Đã lưu mục thường dùng: ${newPreset.label}`);
+    setIsAddingPreset(false);
+    setPresetForm({
+      label: '',
+      amount: '',
+      phan_loai: categories[0] || 'ăn uống',
+      loai: macroTypes[0] || 'thiết yếu',
+      type: 'chi',
+      vault: 'shared'
+    });
+  };
+
+  const handleDeletePreset = (indexToDelete) => {
+    const item = quickList[indexToDelete];
+    if (window.confirm(`Bạn có chắc muốn xóa mục "${item.label}" khỏi danh sách thêm nhanh?`)) {
+      const updated = quickList.filter((_, idx) => idx !== indexToDelete);
+      setQuickList(updated);
+      localStorage.setItem('nt_quick_presets', JSON.stringify(updated));
+      if (onShowToast) onShowToast(`Đã xóa mục: ${item.label}`);
+    }
+  };
 
   const handleOpenQuickConfirm = (item) => {
     setConfirmingQuickItem({
@@ -149,9 +198,20 @@ export default function QuickEntry({
         
         {/* Nút bấm nhanh thường dùng */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-          <span className="text-xs font-semibold text-slate-700">
-            Thêm nhanh thường dùng:
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-700">
+              Thêm nhanh thường dùng:
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsAddingPreset(true)}
+              className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-200/60 flex items-center gap-1 transition-colors"
+              title="Tự tạo mục chi tiêu thường dùng"
+            >
+              <Plus size={11} weight="bold" />
+              <span>Thêm mục</span>
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSmsBox(!showSmsBox)}
@@ -171,16 +231,40 @@ export default function QuickEntry({
         </div>
 
         {/* Danh sách nút bấm nhanh */}
-        <div className="flex flex-wrap gap-2 mb-3">
-          {quickList.map((item, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleOpenQuickConfirm(item)}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200 border border-slate-200/80 text-xs font-medium text-slate-700 tactile-btn transition-colors cursor-pointer"
-            >
-              {item.label} <span className="font-semibold text-slate-900 ml-1 tabular-nums font-money">{new Intl.NumberFormat('vi-VN').format(item.amount)} đ</span>
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {quickList.length === 0 ? (
+            <div className="text-xs text-slate-400 py-1 flex items-center gap-2">
+              <span>Chưa có mục mẫu sẵn.</span>
+              <button
+                type="button"
+                onClick={() => setIsAddingPreset(true)}
+                className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 hover:underline"
+              >
+                <Plus size={13} weight="bold" />
+                <span>Thêm mục thường dùng thủ công</span>
+              </button>
+            </div>
+          ) : (
+            quickList.map((item, idx) => (
+              <div key={idx} className="inline-flex items-center group">
+                <button
+                  type="button"
+                  onClick={() => handleOpenQuickConfirm(item)}
+                  className="px-2.5 py-1.5 rounded-l-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200 border border-r-0 border-slate-200/80 text-xs font-medium text-slate-700 tactile-btn transition-colors cursor-pointer"
+                >
+                  {item.label} <span className="font-semibold text-slate-900 ml-1 tabular-nums font-money">{new Intl.NumberFormat('vi-VN').format(item.amount)} đ</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeletePreset(idx)}
+                  className="px-1.5 py-1.5 rounded-r-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border border-slate-200/80 text-slate-400 text-xs transition-colors"
+                  title="Xóa mục này"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Hộp dán tin nhắn ngân hàng */}
@@ -475,6 +559,113 @@ export default function QuickEntry({
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* POPUP TỰ THÊM MỤC THƯỜNG DÙNG THỦ CÔNG */}
+      {isAddingPreset && (
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setIsAddingPreset(false)}
+        >
+          <div 
+            className="w-full max-w-sm bg-white p-5 rounded-2xl border border-slate-200 shadow-xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Plus size={16} weight="bold" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">
+                    Tạo mục thêm nhanh
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Lưu các khoản bạn hay chi tiêu hàng ngày
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddingPreset(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddPresetSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-500 font-medium mb-1">Tên mục thường dùng *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: Cơm trưa, Cà phê, Xăng xe..."
+                  value={presetForm.label}
+                  onChange={(e) => setPresetForm({ ...presetForm, label: e.target.value })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-500 font-medium mb-1">Số tiền (đ) *</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="VD: 35000"
+                  value={presetForm.amount}
+                  onChange={(e) => setPresetForm({ ...presetForm, amount: e.target.value })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:bg-white focus:border-emerald-500 tabular-nums"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">Phân loại</label>
+                  <select
+                    value={presetForm.phan_loai}
+                    onChange={(e) => setPresetForm({ ...presetForm, phan_loai: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-500 font-medium"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-500 font-medium mb-1">Loại</label>
+                  <select
+                    value={presetForm.loai}
+                    onChange={(e) => setPresetForm({ ...presetForm, loai: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-500 font-medium"
+                  >
+                    {macroTypes.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingPreset(false)}
+                  className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium"
+                >
+                  Hủy (Esc)
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs"
+                >
+                  <Check size={14} weight="bold" />
+                  <span>Lưu mục</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
