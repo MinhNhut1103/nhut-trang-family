@@ -17,6 +17,8 @@ import TransactionModal from './TransactionModal';
 
 export default function TransactionList({ 
   transactions = [], 
+  currentMonth = '2026-10',
+  availableMonths = [],
   onAddTransaction,
   onDeleteTransaction, 
   onUpdateTransaction,
@@ -28,6 +30,7 @@ export default function TransactionList({
   activeVault = 'all',
   activeUser
 }) {
+  const [filterMonth, setFilterMonth] = useState('current');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -82,8 +85,15 @@ export default function TransactionList({
     }
   };
 
-  // Lọc dữ liệu (đã bỏ bộ lọc ví để hiển thị thống nhất toàn bộ thu chi gia đình)
+  // Lọc dữ liệu theo tháng, phân loại, loại, từ khóa
   const filteredList = transactions.filter((tx) => {
+    // Lọc theo tháng
+    if (filterMonth === 'current') {
+      if (currentMonth && !(tx.ngay || '').startsWith(currentMonth)) return false;
+    } else if (filterMonth !== 'all') {
+      if (!(tx.ngay || '').startsWith(filterMonth)) return false;
+    }
+
     // Lọc theo phân loại
     if (filterCategory !== 'all' && tx.phan_loai !== filterCategory) return false;
 
@@ -166,6 +176,29 @@ export default function TransactionList({
               />
               <MagnifyingGlass size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
             </div>
+
+            {/* Lọc Theo Tháng */}
+            <select
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 shadow-2xs"
+            >
+              <option value="current">
+                {currentMonth?.includes('-') ? `Tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth} (Đang xem)
+              </option>
+              <option value="all">Tất cả các tháng ({transactions.length})</option>
+              {availableMonths
+                .filter(m => m !== currentMonth)
+                .map(m => {
+                  const parts = m.split('-');
+                  const label = parts.length === 2 ? `Tháng ${parts[1]}/${parts[0]}` : m;
+                  return (
+                    <option key={m} value={m}>
+                      {label}
+                    </option>
+                  );
+                })}
+            </select>
 
             {/* Lọc Phân loại */}
             <select
@@ -518,6 +551,7 @@ export default function TransactionList({
         macroTypes={macroTypes}
         members={members}
         activeUser={activeUser}
+        currentMonth={currentMonth}
       />
 
     </section>

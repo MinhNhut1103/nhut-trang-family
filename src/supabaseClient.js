@@ -87,6 +87,42 @@ export async function getMonthlyConfig(monthId = '2026-10') {
   return data;
 }
 
+export async function getAllMonthlyConfigs() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('monthly_config')
+    .select('*')
+    .order('id', { ascending: false });
+  
+  if (error) {
+    console.error('Error fetching all monthly configs:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function upsertMonthlyConfig(config) {
+  if (!supabase) return null;
+  const payload = {
+    id: config.id,
+    banner_focus: config.banner_focus || '',
+    han_muc_chi: Number(config.han_muc_chi) || 30000000,
+    ghi_chu: config.ghi_chu || '',
+    updated_at: new Date().toISOString()
+  };
+
+  const { data, error } = await supabase
+    .from('monthly_config')
+    .upsert(payload)
+    .select();
+  
+  if (error) {
+    console.error('Error upserting monthly config:', error);
+    throw error;
+  }
+  return data[0];
+}
+
 export async function updateMonthlyFocus(monthId = '2026-10', focusText) {
   if (!supabase) return null;
   const { data, error } = await supabase

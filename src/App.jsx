@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from './components/Header';
 import BudgetPulse from './components/BudgetPulse';
 import QuickEntry from './components/QuickEntry';
@@ -19,6 +19,8 @@ import {
   deleteTransaction,
   updateTransaction,
   getMonthlyConfig,
+  getAllMonthlyConfigs,
+  upsertMonthlyConfig,
   updateMonthlyFocus,
   getFamilyMembers,
   addFamilyMember,
@@ -27,6 +29,7 @@ import {
 } from './supabaseClient';
 import CategoryManagerModal from './components/CategoryManagerModal';
 import MemberManagerModal from './components/MemberManagerModal';
+import MonthManagerModal from './components/MonthManagerModal';
 import LoginForm from './components/LoginForm';
 import { Check } from '@phosphor-icons/react';
 
@@ -44,10 +47,31 @@ export default function App() {
     return localStorage.getItem('nt_privacy_mode') === 'true';
   });
 
-  const [monthlyConfig, setMonthlyConfig] = useState(() => {
-    const saved = localStorage.getItem('nt_monthly_config');
-    return saved ? JSON.parse(saved) : initialMonthlyConfig;
+  // Quản lý tháng đang xem & ghi chú riêng cho từng tháng
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    return localStorage.getItem('nt_current_month') || '2026-10';
   });
+
+  const [monthlyConfigs, setMonthlyConfigs] = useState(() => {
+    const saved = localStorage.getItem('nt_monthly_configs');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing nt_monthly_configs:', e);
+      }
+    }
+    return {
+      '2026-10': {
+        id: '2026-10',
+        banner_focus: initialMonthlyConfig.banner_focus || 'Tối ưu chi tiêu & tiết kiệm',
+        han_muc_chi: initialMonthlyConfig.han_muc_chi || 30000000,
+        ghi_chu: 'Tháng 10/2026: Ưu tiên tiết kiệm chuẩn bị cho các kế hoạch cuối năm, rà soát hóa đơn điện nước định kỳ.'
+      }
+    };
+  });
+
+  const [isMonthManagerOpen, setIsMonthManagerOpen] = useState(false);
 
   const [transactions, setTransactions] = useState(() => {
     const saved = localStorage.getItem('nt_transactions');
@@ -107,9 +131,21 @@ export default function App() {
         }
       });
 
-      getMonthlyConfig('2026-10').then((config) => {
-        if (config) {
-          setMonthlyConfig(prev => ({ ...prev, ...config }));
+      // Đồng bộ toàn bộ cấu hình & ghi chú của các tháng từ Supabase
+      getAllMonthlyConfigs().then((cloudConfigs) => {
+        if (cloudConfigs && cloudConfigs.length > 0) {
+          setMonthlyConfigs((prev) => {
+            const merged = { ...prev };
+            cloudConfigs.forEach((c) => {
+              merged[c.id] = {
+                id: c.id,
+                banner_focus: c.banner_focus || '',
+                han_muc_chi: Number(c.han_muc_chi) || 30000000,
+                ghi_chu: c.ghi_chu || ''
+              };
+            });
+            return merged;
+          });
         }
       });
 
@@ -145,11 +181,12 @@ export default function App() {
   }, [privacyMode]);
 
   useEffect(() => {
-    localStorage.setItem('nt_monthly_config', JSON.stringify(monthlyConfig));
-    if (isSupabaseConfigured && monthlyConfig.banner_focus) {
-      updateMonthlyFocus(monthlyConfig.id || '2026-10', monthlyConfig.banner_focus);
-    }
-  }, [monthlyConfig]);
+    localStorage.setItem('nt_current_month', currentMonth);
+  }, [currentMonth]);
+
+  useEffect(() => {
+    localStorage.setItem('nt_monthly_configs', JSON.stringify(monthlyConfigs));
+  }, [monthlyConfigs]);
 
   useEffect(() => {
     localStorage.setItem('nt_transactions', JSON.stringify(transactions));
@@ -174,6 +211,63 @@ export default function App() {
       setToastMessage(null);
     }, 2800);
   };
+
+  // Quản lý tháng & ghi chú riêng cho từng tháng
+  const handleSaveMonthlyConfig = async (newConfig) => {
+    setMonthlyConfigs((prev) => ({
+      ...prev,
+      [newConfig.id]: newConfig
+    }));
+    showToast(`Đã lưu ghi chú Tháng ${newConfig.id}`);
+
+    if (isSupabaseConfigured) {
+      try {
+        await upsertMonthlyConfig(newConfig);
+      } catch (err) {
+        console.error('Lỗi lưu cấu hình tháng lên Supabase:', err);
+      }
+    }
+  };
+
+  const handleAddMonth = (monthStr) => {
+    if (!monthlyConfigs[monthStr]) {
+      const initialCfg = {
+        id: monthStr,
+        banner_focus: '',
+        han_muc_chi: 30000000,
+        ghi_chu: ''
+      };
+      handleSaveMonthlyConfig(initialCfg);
+    }
+    setCurrentMonth(monthStr);
+    showToast(`Đã chuyển sang ${monthStr}`);
+  };
+
+  // Tính danh sách các tháng có sẵn
+  const availableMonths = useMemo(() => {
+    const set = new Set(Object.keys(monthlyConfigs));
+    set.add(currentMonth);
+    set.add('2026-10');
+    transactions.forEach((t) => {
+      if (t.ngay && t.ngay.length >= 7) {
+        set.add(t.ngay.slice(0, 7));
+      }
+    });
+    return Array.from(set).sort().reverse();
+  }, [monthlyConfigs, transactions, currentMonth]);
+
+  // Cấu hình tháng hiện tại đang chọn
+  const activeMonthlyConfig = monthlyConfigs[currentMonth] || {
+    id: currentMonth,
+    banner_focus: '',
+    han_muc_chi: 30000000,
+    ghi_chu: ''
+  };
+
+  // Các giao dịch thuộc tháng đang chọn
+  const currentMonthTransactions = useMemo(() => {
+    return transactions.filter((t) => (t.ngay || '').startsWith(currentMonth));
+  }, [transactions, currentMonth]);
 
   // Quản lý CRUD Phân loại
   const handleAddCategory = (newCat) => {
@@ -389,6 +483,18 @@ export default function App() {
         currentUserId={currentUser.id}
       />
 
+      {/* Modal Quản lý Tháng & Ghi Chú Riêng Từng Tháng */}
+      <MonthManagerModal
+        isOpen={isMonthManagerOpen}
+        onClose={() => setIsMonthManagerOpen(false)}
+        currentMonth={currentMonth}
+        onSelectMonth={(m) => setCurrentMonth(m)}
+        monthlyConfigs={monthlyConfigs}
+        onSaveMonthlyConfig={handleSaveMonthlyConfig}
+        availableMonths={availableMonths}
+        onAddMonth={handleAddMonth}
+      />
+
       {/* Nội dung chính */}
       <main>
         {/* Đầu trang */}
@@ -403,14 +509,13 @@ export default function App() {
           onOpenMemberManager={() => setIsMemberManagerOpen(true)}
         />
 
-        {/* Tổng quan tháng 10 */}
+        {/* Tổng quan tháng & ghi chú riêng của tháng */}
         <BudgetPulse
-          monthlyConfig={monthlyConfig}
-          setMonthlyConfig={setMonthlyConfig}
-          transactions={transactions}
-          activeVault={activeVault}
-          setActiveVault={setActiveVault}
-          activeUser={activeUser}
+          transactions={currentMonthTransactions}
+          currentMonth={currentMonth}
+          onSelectMonth={(m) => setCurrentMonth(m)}
+          monthlyConfig={activeMonthlyConfig}
+          onOpenMonthManager={() => setIsMonthManagerOpen(true)}
           privacyMode={privacyMode}
         />
 
@@ -423,18 +528,21 @@ export default function App() {
           categories={categories}
           macroTypes={macroTypes}
           members={members}
+          currentMonth={currentMonth}
         />
 
         {/* Bảng sổ kế toán chuẩn Google Sheets */}
         <TransactionList
           transactions={transactions}
+          currentMonth={currentMonth}
+          availableMonths={availableMonths}
           onAddTransaction={handleAddTransaction}
           onDeleteTransaction={handleDeleteTransaction}
           onUpdateTransaction={handleUpdateTransaction}
           privacyMode={privacyMode}
           activeVault={activeVault}
           activeUser={activeUser}
-          monthlyConfig={monthlyConfig}
+          monthlyConfig={activeMonthlyConfig}
           categories={categories}
           macroTypes={macroTypes}
           members={members}
@@ -449,7 +557,7 @@ export default function App() {
             Sổ thu chi gia đình Nhựt & Trang
           </div>
           <div>
-            Tháng 10/2026 • Đồng bộ Supabase
+            Tháng {currentMonth?.includes('-') ? `${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth} • Đồng bộ Supabase
           </div>
         </div>
       </footer>
@@ -457,3 +565,4 @@ export default function App() {
     </div>
   );
 }
+

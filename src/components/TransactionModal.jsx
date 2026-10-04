@@ -10,15 +10,24 @@ export default function TransactionModal({
   categories = [],
   macroTypes = [],
   members = [],
-  activeUser = 'nhut'
+  activeUser = 'nhut',
+  currentMonth
 }) {
   const isEditing = Boolean(transactionToEdit);
+
+  const getInitialDate = () => {
+    const today = new Date().toISOString().split('T')[0];
+    if (currentMonth && !today.startsWith(currentMonth)) {
+      return `${currentMonth}-01`;
+    }
+    return today;
+  };
 
   const [formData, setFormData] = useState({
     actionType: 'chi', // 'chi' | 'thu'
     so_tien: '',
     noi_dung: '',
-    ngay: new Date().toISOString().split('T')[0],
+    ngay: getInitialDate(),
     gio: getCurrentTime(),
     phan_loai: categories[0] || 'ăn uống',
     loai: macroTypes[0] || 'thiết yếu',
@@ -39,7 +48,7 @@ export default function TransactionModal({
         actionType: isThu ? 'thu' : 'chi',
         so_tien: amount ? String(amount) : '',
         noi_dung: transactionToEdit.noi_dung || '',
-        ngay: transactionToEdit.ngay || new Date().toISOString().split('T')[0],
+        ngay: transactionToEdit.ngay || getInitialDate(),
         gio: transactionToEdit.gio || getCurrentTime(),
         phan_loai: transactionToEdit.phan_loai || (categories[0] || 'ăn uống'),
         loai: transactionToEdit.loai || (macroTypes[0] || 'thiết yếu'),
@@ -53,7 +62,7 @@ export default function TransactionModal({
         actionType: 'chi',
         so_tien: '',
         noi_dung: '',
-        ngay: new Date().toISOString().split('T')[0],
+        ngay: getInitialDate(),
         gio: getCurrentTime(),
         phan_loai: categories[0] || 'ăn uống',
         loai: macroTypes[0] || 'thiết yếu',
@@ -62,7 +71,7 @@ export default function TransactionModal({
         ghi_chu: ''
       });
     }
-  }, [isOpen, transactionToEdit, categories, macroTypes, members, activeUser]);
+  }, [isOpen, transactionToEdit, categories, macroTypes, members, activeUser, currentMonth]);
 
   // Hỗ trợ phím Esc để đóng modal
   useEffect(() => {

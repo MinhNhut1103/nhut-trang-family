@@ -10,12 +10,21 @@ export default function QuickEntry({
   onShowToast,
   categories = categoriesList,
   macroTypes = macroTypesList,
-  members = []
+  members = [],
+  currentMonth
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSmsBox, setShowSmsBox] = useState(false);
   const [smsText, setSmsText] = useState('');
   const [confirmingQuickItem, setConfirmingQuickItem] = useState(null);
+
+  const getInitialDate = () => {
+    const today = new Date().toISOString().split('T')[0];
+    if (currentMonth && !today.startsWith(currentMonth)) {
+      return `${currentMonth}-01`;
+    }
+    return today;
+  };
 
   const [isAddingPreset, setIsAddingPreset] = useState(false);
   const [presetForm, setPresetForm] = useState({
@@ -41,7 +50,7 @@ export default function QuickEntry({
   }, [confirmingQuickItem, isAddingPreset]);
 
   const [formData, setFormData] = useState({
-    ngay: new Date().toISOString().split('T')[0],
+    ngay: getInitialDate(),
     gio: getCurrentTime(),
     noi_dung: '',
     actionType: 'chi', // 'chi' | 'thu'
@@ -51,6 +60,16 @@ export default function QuickEntry({
     vault: activeVault === 'all' ? 'shared' : activeVault,
     ghi_chu: ''
   });
+
+  useEffect(() => {
+    if (currentMonth) {
+      const today = new Date().toISOString().split('T')[0];
+      setFormData(prev => ({
+        ...prev,
+        ngay: !today.startsWith(currentMonth) ? `${currentMonth}-01` : today
+      }));
+    }
+  }, [currentMonth]);
 
   // Danh sách mục thêm nhanh do người dùng tự quản lý (mặc định rỗng)
   const [quickList, setQuickList] = useState(() => {
@@ -104,7 +123,7 @@ export default function QuickEntry({
     setConfirmingQuickItem({
       ...item,
       amount: item.amount,
-      ngay: new Date().toISOString().split('T')[0],
+      ngay: getInitialDate(),
       gio: getCurrentTime(),
       vault: item.vault || (activeVault === 'all' ? 'shared' : activeVault),
       ghi_chu: 'Thêm nhanh thường dùng'
