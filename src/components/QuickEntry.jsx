@@ -41,14 +41,14 @@ export default function QuickEntry({
 
   const getPresetIcon = (iconName) => {
     switch (iconName) {
-      case 'Coffee': return <Coffee size={20} className="text-amber-400" />;
-      case 'ForkKnife': return <ForkKnife size={20} className="text-orange-400" />;
-      case 'ShoppingCart': return <ShoppingCart size={20} className="text-emerald-400" />;
-      case 'GasPump': return <GasPump size={20} className="text-blue-400" />;
-      case 'Cup': return <BowlFood size={20} className="text-pink-400" />;
-      case 'BowlFood': return <BowlFood size={20} className="text-pink-400" />;
-      case 'Laptop': return <Laptop size={20} className="text-purple-400" />;
-      default: return <Receipt size={20} className="text-slate-400" />;
+      case 'Coffee': return <Coffee size={22} className="text-amber-400" />;
+      case 'ForkKnife': return <ForkKnife size={22} className="text-orange-400" />;
+      case 'ShoppingCart': return <ShoppingCart size={22} className="text-emerald-400" />;
+      case 'GasPump': return <GasPump size={22} className="text-blue-400" />;
+      case 'Cup': return <BowlFood size={22} className="text-pink-400" />;
+      case 'BowlFood': return <BowlFood size={22} className="text-pink-400" />;
+      case 'Laptop': return <Laptop size={22} className="text-purple-400" />;
+      default: return <Receipt size={22} className="text-slate-400" />;
     }
   };
 
@@ -148,49 +148,49 @@ export default function QuickEntry({
 
   return (
     <section className="w-full max-w-7xl mx-auto px-4 lg:px-8 py-3">
-      <div className="glass-panel p-5 md:p-6 rounded-2xl border border-slate-800 relative overflow-hidden">
+      <div className="glass-panel p-6 md:p-7 rounded-3xl border border-white/[0.08] relative overflow-hidden shadow-2xl">
         
         {/* Header with Switcher */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 mb-5 border-b border-slate-800/80">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 mb-6 border-b border-white/[0.08]">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Lightning size={20} className="text-amber-400" weight="fill" />
-              Ghi Sổ Siêu Tốc (Zero-Friction Fast Entry)
+              Ghi Nhanh Tiện Lợi (Zero Friction)
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Tự động phân loại <strong>Phân loại</strong> & <strong>Loại</strong> chuẩn theo bảng kế toán.
+              Thao tác siêu tốc giúp duy trì thói quen ghi chép mỗi ngày mà không bị nản.
             </p>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800 overflow-x-auto max-w-full">
+          <div className="flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-white/[0.08] overflow-x-auto max-w-full">
             <button
               onClick={() => setActiveTab('presets')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium tactile-btn whitespace-nowrap transition-all ${
-                activeTab === 'presets' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold tactile-btn whitespace-nowrap transition-all ${
+                activeTab === 'presets' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              ⚡ 1-Chạm Nhanh
+              ⚡ 1-Chạm Thường Dùng
             </button>
             <button
               onClick={() => setActiveTab('sms')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium tactile-btn whitespace-nowrap transition-all ${
-                activeTab === 'sms' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold tactile-btn whitespace-nowrap transition-all ${
+                activeTab === 'sms' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               📩 Dán SMS Ngân Hàng
             </button>
             <button
               onClick={() => setActiveTab('voice')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium tactile-btn whitespace-nowrap transition-all ${
-                activeTab === 'voice' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold tactile-btn whitespace-nowrap transition-all ${
+                activeTab === 'voice' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              🗣️ Giọng Nói / Câu Nhập
+              🗣️ Nhập Câu Tự Nhiên
             </button>
             <button
               onClick={() => setActiveTab('manual')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium tactile-btn whitespace-nowrap transition-all ${
-                activeTab === 'manual' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold tactile-btn whitespace-nowrap transition-all ${
+                activeTab === 'manual' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               ✍️ Chi Tiết (Chuẩn Sheet)
@@ -206,15 +206,15 @@ export default function QuickEntry({
               <span className="text-[11px] text-emerald-400 font-semibold">Người ghi: {activeUser === 'nhut' ? 'Nhựt' : 'Trang'}</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
               {quickPresets.map((preset) => (
                 <button
                   key={preset.id}
                   onClick={() => handlePresetClick(preset)}
-                  className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800/80 hover:border-emerald-500/50 hover:bg-slate-850 hover:shadow-lg tactile-btn transition-all text-left flex flex-col justify-between group"
+                  className="p-4 rounded-2xl bg-slate-900/80 border border-white/[0.08] hover:border-emerald-500/50 hover:bg-slate-850 hover:shadow-xl hover:shadow-emerald-950/30 tactile-btn transition-all text-left flex flex-col justify-between group"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="p-2 rounded-lg bg-slate-800/80 group-hover:bg-emerald-500/10 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-800/90 group-hover:bg-emerald-500/15 flex items-center justify-center transition-colors">
                       {getPresetIcon(preset.icon)}
                     </div>
                     <span className="text-[10px] uppercase font-bold text-slate-500 group-hover:text-emerald-400">
@@ -225,7 +225,7 @@ export default function QuickEntry({
                     <div className="font-semibold text-xs text-slate-200 group-hover:text-white truncate">
                       {preset.label}
                     </div>
-                    <div className={`text-sm font-bold tabular-nums mt-0.5 ${
+                    <div className={`text-sm font-bold tabular-nums mt-1 ${
                       preset.isIncome ? 'text-emerald-400' : 'text-white'
                     }`}>
                       {preset.isIncome ? '+' : '-'}{new Intl.NumberFormat('vi-VN').format(preset.amount)} ₫
@@ -241,25 +241,25 @@ export default function QuickEntry({
         {activeTab === 'sms' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                Dán nội dung tin nhắn biến động số dư (Techcombank, Vietcombank, Momo, MBBank...):
+              <label className="block text-xs font-semibold text-slate-300 mb-2">
+                Dán tin nhắn thông báo biến động số dư (Techcombank, Vietcombank, Momo, MBBank...):
               </label>
               <textarea
                 value={smsInput}
                 onChange={(e) => handleParseSms(e.target.value)}
                 placeholder="Ví dụ: TK 1903... tai TCB GD -185,000VND luc 04/10/2026. ND: WINMART CONG HOA..."
                 rows={3}
-                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full p-4 rounded-2xl bg-slate-900/90 border border-white/[0.08] text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-slate-400">Dán mẫu thử nghiệm ngay:</span>
+              <span className="text-slate-400">Thử ngay mẫu có sẵn:</span>
               {sampleSmsTemplates.map((tpl, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleParseSms(tpl.text)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 tactile-btn transition-colors text-[11px]"
+                  className="px-3 py-1.5 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-200 border border-white/[0.08] tactile-btn transition-colors text-[11px]"
                 >
                   📋 {tpl.name}
                 </button>
@@ -267,10 +267,10 @@ export default function QuickEntry({
             </div>
 
             {parsedPreview && (
-              <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/40 text-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="p-5 rounded-2xl bg-emerald-950/20 border border-emerald-500/40 text-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
                       Tự nhận diện thành công ✨
                     </span>
                     <span className="text-xs text-slate-400">
@@ -288,7 +288,7 @@ export default function QuickEntry({
                     <select
                       value={parsedPreview.vault}
                       onChange={(e) => setParsedPreview({ ...parsedPreview, vault: e.target.value })}
-                      className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-emerald-300 focus:outline-none"
+                      className="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-xs text-emerald-300 focus:outline-none"
                     >
                       <option value="shared">🌿 Quỹ Chung Tổ Ấm</option>
                       <option value="personal_nhut">🔒 Ví Riêng Nhựt</option>
@@ -299,7 +299,7 @@ export default function QuickEntry({
 
                 <button
                   onClick={handleConfirmSms}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 tactile-btn shadow-lg transition-all"
+                  className="px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 tactile-btn shadow-lg transition-all"
                 >
                   <Check size={18} weight="bold" />
                   Xác nhận lưu vào sổ
@@ -309,23 +309,23 @@ export default function QuickEntry({
           </div>
         )}
 
-        {/* TAB 3: Natural Language / Voice Prompt */}
+        {/* TAB 3: Natural Language */}
         {activeTab === 'voice' && (
           <form onSubmit={handleNaturalSubmit} className="space-y-3">
             <div className="text-xs text-slate-400">
               Nhập câu tự nhiên, hệ thống tự động bóc tách số tiền, phân loại và người ghi:
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2.5">
               <input
                 type="text"
                 value={naturalInput}
                 onChange={(e) => setNaturalInput(e.target.value)}
                 placeholder="Ví dụ: Trang đi bách hóa xanh 190k nước giặt pin... hoặc Nhựt nhận phí web 2 triệu"
-                className="flex-1 px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-900/90 border border-white/[0.08] text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
               <button
                 type="submit"
-                className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm flex items-center justify-center gap-2 tactile-btn transition-all"
+                className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm flex items-center justify-center gap-2 tactile-btn transition-all shadow-md"
               >
                 <Sparkle size={18} weight="fill" />
                 Ghi sổ tức thì
@@ -360,7 +360,7 @@ export default function QuickEntry({
           </form>
         )}
 
-        {/* TAB 4: Detailed Manual Form (Y hệt các cột trong Excel) */}
+        {/* TAB 4: Detailed Manual Form */}
         {activeTab === 'manual' && (
           <form onSubmit={handleManualSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
             <div>
@@ -370,7 +370,7 @@ export default function QuickEntry({
                 required
                 value={manualData.ngay}
                 onChange={(e) => setManualData({ ...manualData, ngay: e.target.value })}
-                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full p-3 rounded-xl bg-slate-900/90 border border-white/[0.08] text-slate-100 focus:border-emerald-500 focus:outline-none"
               />
             </div>
 
@@ -382,7 +382,7 @@ export default function QuickEntry({
                 placeholder="Ăn sáng sữa đậu nành, phí web..."
                 value={manualData.noi_dung}
                 onChange={(e) => setManualData({ ...manualData, noi_dung: e.target.value })}
-                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full p-3 rounded-xl bg-slate-900/90 border border-white/[0.08] text-slate-100 focus:border-emerald-500 focus:outline-none"
               />
             </div>
 
@@ -393,7 +393,7 @@ export default function QuickEntry({
                 placeholder="Để trống nếu là Chi"
                 value={manualData.thu}
                 onChange={(e) => setManualData({ ...manualData, thu: e.target.value, chi: e.target.value ? '' : manualData.chi })}
-                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-emerald-300 font-semibold focus:border-emerald-500 focus:outline-none tabular-nums"
+                className="w-full p-3 rounded-xl bg-slate-900/90 border border-white/[0.08] text-emerald-300 font-semibold focus:border-emerald-500 focus:outline-none tabular-nums"
               />
             </div>
 
@@ -404,7 +404,7 @@ export default function QuickEntry({
                 placeholder="Để trống nếu là Thu"
                 value={manualData.chi}
                 onChange={(e) => setManualData({ ...manualData, chi: e.target.value, thu: e.target.value ? '' : manualData.thu })}
-                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-rose-300 font-semibold focus:border-emerald-500 focus:outline-none tabular-nums"
+                className="w-full p-3 rounded-xl bg-slate-900/90 border border-white/[0.08] text-rose-300 font-semibold focus:border-emerald-500 focus:outline-none tabular-nums"
               />
             </div>
 
@@ -413,7 +413,7 @@ export default function QuickEntry({
               <select
                 value={manualData.phan_loai}
                 onChange={(e) => setManualData({ ...manualData, phan_loai: e.target.value })}
-                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full p-3 rounded-xl bg-slate-900/90 border border-white/[0.08] text-slate-100 focus:border-emerald-500 focus:outline-none"
               >
                 {categoriesList.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
@@ -426,7 +426,7 @@ export default function QuickEntry({
               <select
                 value={manualData.loai}
                 onChange={(e) => setManualData({ ...manualData, loai: e.target.value })}
-                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full p-3 rounded-xl bg-slate-900/90 border border-white/[0.08] text-slate-100 focus:border-emerald-500 focus:outline-none"
               >
                 {macroTypesList.map(t => (
                   <option key={t} value={t}>{t}</option>
@@ -439,7 +439,7 @@ export default function QuickEntry({
               <select
                 value={manualData.vault}
                 onChange={(e) => setManualData({ ...manualData, vault: e.target.value })}
-                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full p-3 rounded-xl bg-slate-900/90 border border-white/[0.08] text-slate-100 focus:border-emerald-500 focus:outline-none"
               >
                 <option value="shared">🌿 Quỹ Chung Tổ Ấm</option>
                 <option value="personal_nhut">🔒 Ví Riêng Nhựt</option>
@@ -450,10 +450,10 @@ export default function QuickEntry({
             <div className="flex items-end">
               <button
                 type="submit"
-                className="w-full p-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold tactile-btn flex items-center justify-center gap-1.5 transition-colors shadow-md"
+                className="w-full p-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold tactile-btn flex items-center justify-center gap-1.5 transition-colors shadow-md"
               >
                 <Plus size={16} weight="bold" />
-                Lưu Vào Bảng Sổ
+                Lưu Vào Sổ
               </button>
             </div>
           </form>
