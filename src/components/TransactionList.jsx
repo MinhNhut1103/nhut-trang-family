@@ -264,204 +264,206 @@ export default function TransactionList({
       <div className="card-soft overflow-hidden">
         
         {/* ========================================================= */}
-        {/* THANH CÔNG CỤ 2 HÀNG: SEARCH TO, BỘ LỌC NGÀY VÀ THAO TÁC */}
+        {/* THANH CÔNG CỤ THEO DẠNG HÀNG 100% TRỰC QUAN CHO MOBILE */}
         {/* ========================================================= */}
-        <div className="p-3.5 sm:p-4 bg-slate-50/80 border-b border-slate-200/90 space-y-3">
+        <div className="p-3.5 sm:p-4 bg-slate-50/90 border-b border-slate-200/90 space-y-2.5">
           
-          {/* HÀNG 1: SEARCH TO RỘNG RÃI & CỤM NÚT HÀNH ĐỘNG */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          {/* HÀNG 1: NÚT HÀNH ĐỘNG CHÍNH - THÊM THU CHI (100% WIDTH TRÊN MOBILE) */}
+          <div className="w-full flex items-center justify-between gap-2">
+            <button
+              onClick={handleOpenAdd}
+              type="button"
+              className="w-full py-2.5 sm:py-3 px-4 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xs transition-colors tactile-btn"
+              title="Thêm khoản thu chi mới vào sổ"
+            >
+              <Plus size={18} weight="bold" />
+              <span>+ Thêm thu chi mới</span>
+            </button>
+          </div>
+
+          {/* HÀNG 2: TÌM KIẾM TOÀN DIỆN (100% WIDTH) */}
+          <div className="relative w-full">
+            <MagnifyingGlass size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="Tìm nội dung, người ghi, ghi chú, số tiền..."
+              className="w-full pl-10 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-2xs font-normal"
+            />
+            {searchKeyword && (
+              <button
+                type="button"
+                onClick={() => setSearchKeyword('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full transition-colors"
+                title="Xóa tìm kiếm"
+              >
+                <X size={15} weight="bold" />
+              </button>
+            )}
+          </div>
+
+          {/* HÀNG BỘ LỌC CHI TIẾT: CÁC HÀNG 100% RÕ RÀNG, DỄ BẤM TRÊN MOBILE */}
+          <div className="w-full space-y-2 pt-1">
             
-            {/* Khung tìm kiếm to, rõ ràng */}
-            <div className="relative flex-1">
-              <MagnifyingGlass size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="Tìm nội dung, người ghi, ghi chú, số tiền..."
-                className="w-full pl-10 pr-9 py-2 sm:py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 shadow-2xs transition-all font-normal"
-              />
-              {searchKeyword && (
-                <button
-                  type="button"
-                  onClick={() => setSearchKeyword('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full transition-colors"
-                  title="Xóa tìm kiếm"
-                >
-                  <X size={14} weight="bold" />
-                </button>
-              )}
+            {/* Lọc theo Tháng (100% width) */}
+            <div className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
+              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold shrink-0">
+                <Calendar size={16} className="text-emerald-700" weight="bold" />
+                <span>Tháng:</span>
+              </div>
+              <select
+                value={filterMonth}
+                onChange={(e) => {
+                  setFilterMonth(e.target.value);
+                  if (filterDate && e.target.value !== 'all') {
+                    const targetPrefix = e.target.value === 'current' ? currentMonth : e.target.value;
+                    if (!filterDate.startsWith(targetPrefix)) {
+                      setFilterDate('');
+                    }
+                  }
+                }}
+                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-2 truncate"
+              >
+                <option value="current">
+                  {currentMonth?.includes('-') ? `Tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth} (Đang xem)
+                </option>
+                <option value="all">Tất cả các tháng ({transactions.length} khoản)</option>
+                {availableMonths
+                  .filter(m => m !== currentMonth)
+                  .map(m => {
+                    const parts = m.split('-');
+                    const label = parts.length === 2 ? `Tháng ${parts[1]}/${parts[0]}` : m;
+                    return (
+                      <option key={m} value={m}>
+                        {label}
+                      </option>
+                    );
+                  })}
+              </select>
             </div>
 
-            {/* Cụm nút Thêm mới, Danh mục, Chế độ xem & Xuất file */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              
-              {/* NÚT THÊM THU CHI MỚI */}
-              <button
-                onClick={handleOpenAdd}
-                className="flex-1 sm:flex-none px-3.5 py-2 sm:py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors tactile-btn"
-                title="Thêm khoản thu chi mới vào sổ"
-              >
-                <Plus size={15} weight="bold" />
-                <span>Thêm thu chi</span>
-              </button>
+            {/* Lọc theo Ngày (100% width) - Gọn đẹp, không bị lỗi hiển thị d📅 */}
+            <div className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
+              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold shrink-0">
+                <Clock size={16} className="text-emerald-700" weight="bold" />
+                <span>Ngày:</span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+                <select
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-2 truncate"
+                >
+                  <option value="">Tất cả các ngày trong tháng</option>
+                  {availableDaysInScope.map((d) => (
+                    <option key={d.iso} value={d.iso}>
+                      {d.label} ({d.count} khoản)
+                    </option>
+                  ))}
+                </select>
+                {filterDate && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterDate('')}
+                    className="text-slate-400 hover:text-rose-600 p-0.5 rounded-full shrink-0"
+                    title="Bỏ chọn ngày"
+                  >
+                    <X size={14} weight="bold" />
+                  </button>
+                )}
+              </div>
+            </div>
 
-              {/* Nút sửa danh mục */}
-              <button
-                onClick={onOpenCategoryManager}
-                className="px-3 py-2 sm:py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 transition-colors font-medium text-xs sm:text-sm shadow-2xs"
-                title="Thêm, sửa, xóa phân loại và loại"
+            {/* Lọc theo Phân loại (100% width) */}
+            <div className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
+              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold shrink-0">
+                <Funnel size={16} className="text-emerald-700" weight="bold" />
+                <span>Phân loại:</span>
+              </div>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-2 truncate"
               >
-                <SlidersHorizontal size={15} />
-                <span className="hidden sm:inline">Danh mục</span>
-              </button>
+                <option value="all">Tất cả phân loại ({categories.length})</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
 
-              {/* Chuyển dạng xem thẻ / bảng trên mobile */}
-              <button
-                onClick={() => setMobileView(mobileView === 'table' ? 'cards' : 'table')}
-                className="md:hidden px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center gap-1 text-xs shadow-2xs font-medium"
-                title="Đổi giao diện xem Thẻ hoặc Bảng"
+            {/* Lọc theo Loại (100% width) */}
+            <div className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
+              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold shrink-0">
+                <SlidersHorizontal size={16} className="text-emerald-700" weight="bold" />
+                <span>Loại:</span>
+              </div>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-2 truncate"
               >
-                {mobileView === 'table' ? <ListBullets size={15} /> : <Table size={15} />}
-                <span>{mobileView === 'table' ? 'Thẻ' : 'Bảng'}</span>
-              </button>
-
-              {/* Nút xuất file Excel / CSV */}
-              <button
-                onClick={handleExportCSV}
-                className="px-3 py-2 sm:py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 transition-colors font-medium text-xs sm:text-sm shadow-2xs"
-                title="Xuất file CSV/Excel"
-              >
-                <DownloadSimple size={15} />
-                <span className="hidden sm:inline">Xuất Excel</span>
-              </button>
+                <option value="all">Tất cả loại ({macroTypes.length})</option>
+                {macroTypes.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
             </div>
 
           </div>
 
-          {/* HÀNG 2: BỘ LỌC CHI TIẾT (LỌC THÁNG, NGÀY CHỌN, PHÂN LOẠI, LOẠI) */}
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/70 text-xs">
-            
-            {/* Nhãn bộ lọc */}
-            <div className="flex items-center gap-1.5 text-slate-500 font-semibold shrink-0 py-0.5">
-              <Funnel size={14} weight="bold" className="text-emerald-700" />
-              <span>Bộ lọc:</span>
-            </div>
-
-            {/* 1. Lọc Theo Tháng */}
-            <select
-              value={filterMonth}
-              onChange={(e) => {
-                setFilterMonth(e.target.value);
-                // Nếu đang lọc ngày mà chuyển sang tháng khác không chứa ngày đó thì reset ngày
-                if (filterDate && e.target.value !== 'all') {
-                  const targetPrefix = e.target.value === 'current' ? currentMonth : e.target.value;
-                  if (!filterDate.startsWith(targetPrefix)) {
-                    setFilterDate('');
-                  }
-                }
-              }}
-              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 shadow-2xs"
+          {/* HÀNG CÔNG CỤ PHỤ (DANH MỤC, XEM BẢNG/THẺ, XUẤT FILE) - CHIA 3 CỘT ĐỀU ĐẸP MẮT */}
+          <div className="w-full grid grid-cols-3 gap-2 pt-1 border-t border-slate-200/70">
+            <button
+              onClick={onOpenCategoryManager}
+              className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors"
+              title="Quản lý danh sách phân loại & loại"
             >
-              <option value="current">
-                {currentMonth?.includes('-') ? `Tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth} (Đang xem)
-              </option>
-              <option value="all">Tất cả các tháng ({transactions.length})</option>
-              {availableMonths
-                .filter(m => m !== currentMonth)
-                .map(m => {
-                  const parts = m.split('-');
-                  const label = parts.length === 2 ? `Tháng ${parts[1]}/${parts[0]}` : m;
-                  return (
-                    <option key={m} value={m}>
-                      {label}
-                    </option>
-                  );
-                })}
-            </select>
+              <SlidersHorizontal size={15} className="text-emerald-700 shrink-0" />
+              <span>Danh mục</span>
+            </button>
 
-            {/* 2. LỌC THEO NGÀY (CẢ DROPDOWN CHỌN NGÀY VÀ DATE PICKER) */}
-            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1 shadow-2xs">
-              <Calendar size={15} className="text-emerald-700 shrink-0" weight="bold" />
-              
-              {/* Dropdown danh sách các ngày có dữ liệu phát sinh */}
-              <select
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="text-xs text-slate-800 font-semibold focus:outline-none bg-transparent cursor-pointer max-w-[145px] sm:max-w-[180px]"
-                title="Chọn ngày nhanh từ danh sách"
-              >
-                <option value="">Tất cả các ngày</option>
-                {availableDaysInScope.map((d) => (
-                  <option key={d.iso} value={d.iso}>
-                    {d.label} ({d.count} khoản)
-                  </option>
-                ))}
-              </select>
-
-              {/* Input Date Picker kèm theo để người dùng tự chọn bất kỳ ngày nào trên lịch */}
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="text-xs text-slate-500 focus:outline-none bg-transparent cursor-pointer w-6 sm:w-auto"
-                title="Hoặc bấm để mở lịch chọn ngày"
-              />
-
-              {filterDate && (
-                <button
-                  type="button"
-                  onClick={() => setFilterDate('')}
-                  className="text-slate-400 hover:text-rose-600 p-0.5 rounded-full transition-colors"
-                  title="Xóa lọc theo ngày"
-                >
-                  <X size={13} weight="bold" />
-                </button>
+            <button
+              onClick={() => setMobileView(mobileView === 'table' ? 'cards' : 'table')}
+              className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors"
+              title="Chuyển chế độ xem Thẻ / Bảng"
+            >
+              {mobileView === 'table' ? (
+                <ListBullets size={15} className="text-emerald-700 shrink-0" />
+              ) : (
+                <Table size={15} className="text-emerald-700 shrink-0" />
               )}
+              <span>{mobileView === 'table' ? 'Dạng thẻ' : 'Dạng bảng'}</span>
+            </button>
+
+            <button
+              onClick={handleExportCSV}
+              className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors"
+              title="Xuất dữ liệu ra Excel CSV"
+            >
+              <DownloadSimple size={15} className="text-emerald-700 shrink-0" />
+              <span>Xuất Excel</span>
+            </button>
+          </div>
+
+          {/* HÀNG TRẠNG THÁI: SỐ LƯỢNG VÀ NÚT ĐẶT LẠI */}
+          <div className="w-full flex items-center justify-between text-xs pt-1 px-1">
+            <div className="text-slate-500 font-medium">
+              Hiển thị <strong className="text-slate-800 tabular-nums">{filteredList.length}</strong> / {transactions.length} khoản
             </div>
 
-            {/* 3. Lọc Phân loại */}
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:outline-none focus:border-emerald-500 shadow-2xs"
-            >
-              <option value="all">Tất cả phân loại</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-
-            {/* 4. Lọc Loại */}
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:outline-none focus:border-emerald-500 shadow-2xs"
-            >
-              <option value="all">Tất cả loại</option>
-              {macroTypes.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-
-            {/* Nút đặt lại / xóa bộ lọc khi có bộ lọc đang hoạt động */}
             {isFiltering && (
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 px-2 py-1 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
+                className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 px-2.5 py-1 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
                 title="Bấm để xóa toàn bộ các bộ lọc và tìm kiếm"
               >
                 <ArrowCounterClockwise size={12} weight="bold" />
-                <span>Đặt lại</span>
+                <span>Đặt lại bộ lọc</span>
               </button>
             )}
-
-            {/* Số lượng giao dịch hiển thị */}
-            <div className="ml-auto text-[11px] text-slate-500 font-medium py-1">
-              Hiển thị <strong className="text-slate-800 tabular-nums">{filteredList.length}</strong> / {transactions.length} khoản
-            </div>
-
           </div>
 
         </div>

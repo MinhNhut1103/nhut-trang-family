@@ -46,53 +46,52 @@ export default function BudgetPulse({
   return (
     <section className="w-full max-w-5xl mx-auto px-4 md:px-8 pt-4 pb-2">
       
-      {/* 1. THANH CHUYỂN THÁNG & QUẢN LÝ THÁNG */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
-        {/* Bộ điều hướng tháng */}
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs">
+      {/* 1. THANH CHUYỂN THÁNG & QUẢN LÝ THÁNG (DẠNG HÀNG 100% TRỰC QUAN) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+        {/* Bộ điều hướng tháng 100% trên mobile */}
+        <div className="w-full sm:w-auto flex items-center justify-between bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs">
           <button
             type="button"
             onClick={() => onSelectMonth && onSelectMonth(getPrevMonth(currentMonth))}
-            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors tactile-btn"
             title="Tháng trước"
           >
-            <CaretLeft size={16} weight="bold" />
+            <CaretLeft size={18} weight="bold" />
           </button>
 
           <button
             type="button"
             onClick={onOpenMonthManager}
-            className="px-3 py-1 rounded-xl text-xs md:text-sm font-bold text-slate-800 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold text-slate-800 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center gap-1.5"
             title="Bấm để mở Quản lý tháng & Ghi chú"
           >
-            <Calendar size={15} weight="bold" className="text-emerald-700" />
+            <Calendar size={16} weight="bold" className="text-emerald-700" />
             <span>{currentMonthLabel}</span>
           </button>
 
           <button
             type="button"
             onClick={() => onSelectMonth && onSelectMonth(getNextMonth(currentMonth))}
-            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors tactile-btn"
             title="Tháng tiếp theo"
           >
-            <CaretRight size={16} weight="bold" />
+            <CaretRight size={18} weight="bold" />
           </button>
         </div>
 
-        {/* Nút mở Quản lý tháng & Số dòng giao dịch */}
-        <div className="flex items-center gap-2">
+        {/* Nút Quản lý tháng & Thống kê số lượng (100% trên mobile) */}
+        <div className="w-full sm:w-auto flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onOpenMonthManager}
-            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100/80 border border-emerald-200/60 px-2.5 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 shadow-2xs"
+            className="flex-1 sm:flex-none text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-200/80 px-3 py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-2xs tactile-btn"
           >
-            <Note size={14} weight="bold" />
-            <span className="hidden sm:inline">Quản lý tháng & Note</span>
-            <span className="sm:hidden">Quản lý tháng</span>
+            <Note size={15} weight="bold" />
+            <span>Quản lý tháng & Ghi chú</span>
           </button>
 
-          <div className="text-xs text-slate-500 font-medium bg-slate-100/90 px-2.5 py-1.5 rounded-xl border border-slate-200/80 tabular-nums">
-            <strong className="text-slate-700">{transactions.length}</strong> giao dịch
+          <div className="text-xs text-slate-600 font-medium bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs tabular-nums shrink-0">
+            <strong className="text-slate-800">{transactions.length}</strong> giao dịch
           </div>
         </div>
       </div>
