@@ -10,7 +10,11 @@ import {
   Clock,
   Plus,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
+  Calendar,
+  Funnel,
+  ArrowCounterClockwise,
+  X
 } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList } from '../data/initialData';
 import TransactionModal from './TransactionModal';
@@ -31,6 +35,7 @@ export default function TransactionList({
   activeUser
 }) {
   const [filterMonth, setFilterMonth] = useState('current');
+  const [filterDate, setFilterDate] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -85,27 +90,38 @@ export default function TransactionList({
     }
   };
 
-  // Lọc dữ liệu theo tháng, phân loại, loại, từ khóa
+  // Lọc dữ liệu theo ngày, tháng, phân loại, loại, từ khóa
   const filteredList = transactions.filter((tx) => {
-    // Lọc theo tháng
-    if (filterMonth === 'current') {
-      if (currentMonth && !(tx.ngay || '').startsWith(currentMonth)) return false;
-    } else if (filterMonth !== 'all') {
-      if (!(tx.ngay || '').startsWith(filterMonth)) return false;
+    // 1. Lọc theo ngày cụ thể (nếu người dùng chọn ngày)
+    if (filterDate) {
+      if (tx.ngay !== filterDate) return false;
+    } else {
+      // Nếu không chọn ngày cụ thể thì lọc theo tháng
+      if (filterMonth === 'current') {
+        if (currentMonth && !(tx.ngay || '').startsWith(currentMonth)) return false;
+      } else if (filterMonth !== 'all') {
+        if (!(tx.ngay || '').startsWith(filterMonth)) return false;
+      }
     }
 
-    // Lọc theo phân loại
+    // 2. Lọc theo phân loại
     if (filterCategory !== 'all' && tx.phan_loai !== filterCategory) return false;
 
-    // Lọc theo loại
+    // 3. Lọc theo loại
     if (filterType !== 'all' && tx.loai !== filterType) return false;
 
-    // Tìm kiếm nội dung
+    // 4. Tìm kiếm nội dung, người ghi, ghi chú, số tiền
     if (searchKeyword.trim()) {
       const q = searchKeyword.toLowerCase();
       const matchTitle = (tx.noi_dung || '').toLowerCase().includes(q);
       const matchNote = (tx.ghi_chu || '').toLowerCase().includes(q);
-      if (!matchTitle && !matchNote) return false;
+      const matchAuthor = (tx.author || '').toLowerCase().includes(q);
+      const cleanDigits = q.replace(/\D/g, '');
+      const matchAmount = cleanDigits && (
+        String(tx.thu || '').includes(cleanDigits) || 
+        String(tx.chi || '').includes(cleanDigits)
+      );
+      if (!matchTitle && !matchNote && !matchAuthor && !matchAmount) return false;
     }
 
     return true;
@@ -113,6 +129,23 @@ export default function TransactionList({
 
   const totalThu = filteredList.reduce((s, t) => s + (Number(t.thu) || 0), 0);
   const totalChi = filteredList.reduce((s, t) => s + (Number(t.chi) || 0), 0);
+
+  // Kiểm tra có đang kích hoạt bộ lọc nào không
+  const isFiltering = Boolean(
+    filterDate || 
+    filterCategory !== 'all' || 
+    filterType !== 'all' || 
+    filterMonth !== 'current' || 
+    searchKeyword.trim()
+  );
+
+  const handleResetFilters = () => {
+    setFilterMonth('current');
+    setFilterDate('');
+    setFilterCategory('all');
+    setFilterType('all');
+    setSearchKeyword('');
+  };
 
   // Xuất file CSV
   const handleExportCSV = () => {
@@ -136,7 +169,7 @@ export default function TransactionList({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `thu_chi_thang_10_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `thu_chi_${currentMonth}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -162,26 +195,105 @@ export default function TransactionList({
     <section className="w-full max-w-5xl mx-auto px-4 md:px-8 py-3 pb-12">
       <div className="card-soft overflow-hidden">
         
-        {/* Thanh công cụ tìm kiếm & Thao tác Thêm / Sửa / Xuất file */}
-        <div className="p-3.5 md:p-4 bg-slate-50/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        {/* ========================================================= */}
+        {/* THANH CÔNG CỤ 2 HÀNG: SEARCH TO, BỘ LỌC NGÀY VÀ THAO TÁC */}
+        {/* ========================================================= */}
+        <div className="p-3.5 sm:p-4 bg-slate-50/80 border-b border-slate-200/90 space-y-3">
           
-          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-            <div className="relative flex-1 max-w-xs">
+          {/* HÀNG 1: SEARCH TO RỘNG RÃI & CỤM NÚT HÀNH ĐỘNG */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+            
+            {/* Khung tìm kiếm to, rõ ràng */}
+            <div className="relative flex-1">
+              <MagnifyingGlass size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="Tìm nội dung..."
-                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                placeholder="Tìm nội dung, người ghi, ghi chú, số tiền..."
+                className="w-full pl-10 pr-9 py-2 sm:py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 shadow-2xs transition-all font-normal"
               />
-              <MagnifyingGlass size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+              {searchKeyword && (
+                <button
+                  type="button"
+                  onClick={() => setSearchKeyword('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full transition-colors"
+                  title="Xóa tìm kiếm"
+                >
+                  <X size={14} weight="bold" />
+                </button>
+              )}
             </div>
 
-            {/* Lọc Theo Tháng */}
+            {/* Cụm nút Thêm mới, Danh mục, Chế độ xem & Xuất file */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              
+              {/* NÚT THÊM THU CHI MỚI */}
+              <button
+                onClick={handleOpenAdd}
+                className="flex-1 sm:flex-none px-3.5 py-2 sm:py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors tactile-btn"
+                title="Thêm khoản thu chi mới vào sổ"
+              >
+                <Plus size={15} weight="bold" />
+                <span>Thêm thu chi</span>
+              </button>
+
+              {/* Nút sửa danh mục */}
+              <button
+                onClick={onOpenCategoryManager}
+                className="px-3 py-2 sm:py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 transition-colors font-medium text-xs sm:text-sm shadow-2xs"
+                title="Thêm, sửa, xóa phân loại và loại"
+              >
+                <SlidersHorizontal size={15} />
+                <span className="hidden sm:inline">Danh mục</span>
+              </button>
+
+              {/* Chuyển dạng xem thẻ / bảng trên mobile */}
+              <button
+                onClick={() => setMobileView(mobileView === 'table' ? 'cards' : 'table')}
+                className="md:hidden px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center gap-1 text-xs shadow-2xs font-medium"
+                title="Đổi giao diện xem Thẻ hoặc Bảng"
+              >
+                {mobileView === 'table' ? <ListBullets size={15} /> : <Table size={15} />}
+                <span>{mobileView === 'table' ? 'Thẻ' : 'Bảng'}</span>
+              </button>
+
+              {/* Nút xuất file Excel / CSV */}
+              <button
+                onClick={handleExportCSV}
+                className="px-3 py-2 sm:py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 transition-colors font-medium text-xs sm:text-sm shadow-2xs"
+                title="Xuất file CSV/Excel"
+              >
+                <DownloadSimple size={15} />
+                <span className="hidden sm:inline">Xuất Excel</span>
+              </button>
+            </div>
+
+          </div>
+
+          {/* HÀNG 2: BỘ LỌC CHI TIẾT (LỌC THÁNG, NGÀY CHỌN, PHÂN LOẠI, LOẠI) */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/70 text-xs">
+            
+            {/* Nhãn bộ lọc */}
+            <div className="flex items-center gap-1.5 text-slate-500 font-semibold shrink-0 py-0.5">
+              <Funnel size={14} weight="bold" className="text-emerald-700" />
+              <span>Bộ lọc:</span>
+            </div>
+
+            {/* 1. Lọc Theo Tháng */}
             <select
               value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 shadow-2xs"
+              onChange={(e) => {
+                setFilterMonth(e.target.value);
+                // Nếu đang lọc ngày mà chuyển sang tháng khác không chứa ngày đó thì reset ngày
+                if (filterDate && e.target.value !== 'all') {
+                  const targetPrefix = e.target.value === 'current' ? currentMonth : e.target.value;
+                  if (!filterDate.startsWith(targetPrefix)) {
+                    setFilterDate('');
+                  }
+                }
+              }}
+              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 shadow-2xs"
             >
               <option value="current">
                 {currentMonth?.includes('-') ? `Tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth} (Đang xem)
@@ -200,11 +312,34 @@ export default function TransactionList({
                 })}
             </select>
 
-            {/* Lọc Phân loại */}
+            {/* 2. LỌC THEO NGÀY CỤ THỂ (DATE PICKER) */}
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1 shadow-2xs">
+              <Calendar size={14} className="text-emerald-700 shrink-0" weight="bold" />
+              <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">Ngày:</span>
+              <input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="text-xs text-slate-800 font-medium focus:outline-none bg-transparent cursor-pointer"
+                title="Chọn ngày cụ thể để lọc"
+              />
+              {filterDate && (
+                <button
+                  type="button"
+                  onClick={() => setFilterDate('')}
+                  className="text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                  title="Xóa lọc theo ngày"
+                >
+                  <X size={12} weight="bold" />
+                </button>
+              )}
+            </div>
+
+            {/* 3. Lọc Phân loại */}
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500"
+              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:outline-none focus:border-emerald-500 shadow-2xs"
             >
               <option value="all">Tất cả phân loại</option>
               {categories.map(cat => (
@@ -212,58 +347,36 @@ export default function TransactionList({
               ))}
             </select>
 
-            {/* Lọc Loại */}
+            {/* 4. Lọc Loại */}
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500 hidden sm:block"
+              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:outline-none focus:border-emerald-500 shadow-2xs"
             >
               <option value="all">Tất cả loại</option>
               {macroTypes.map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
-          </div>
 
-          {/* Cụm nút Thêm mới & Quản lý danh mục & Chuyển chế độ xem & Xuất file */}
-          <div className="flex items-center gap-2">
-            
-            {/* NÚT THÊM THU CHI MỚI */}
-            <button
-              onClick={handleOpenAdd}
-              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors tactile-btn"
-              title="Thêm khoản thu chi mới vào sổ"
-            >
-              <Plus size={14} weight="bold" />
-              <span>Thêm thu chi</span>
-            </button>
+            {/* Nút đặt lại / xóa bộ lọc khi có bộ lọc đang hoạt động */}
+            {isFiltering && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 px-2 py-1 rounded-xl transition-colors flex items-center gap-1 shadow-2xs"
+                title="Bấm để xóa toàn bộ các bộ lọc và tìm kiếm"
+              >
+                <ArrowCounterClockwise size={12} weight="bold" />
+                <span>Đặt lại</span>
+              </button>
+            )}
 
-            {/* Nút quản lý phân loại & loại */}
-            <button
-              onClick={onOpenCategoryManager}
-              className="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 tactile-btn flex items-center gap-1.5 transition-colors font-medium shadow-2xs"
-              title="Thêm, sửa, xóa phân loại và loại"
-            >
-              <SlidersHorizontal size={14} />
-              <span className="hidden sm:inline">Sửa danh mục</span>
-            </button>
+            {/* Số lượng giao dịch hiển thị */}
+            <div className="ml-auto text-[11px] text-slate-500 font-medium py-1">
+              Hiển thị <strong className="text-slate-800 tabular-nums">{filteredList.length}</strong> / {transactions.length} khoản
+            </div>
 
-            <button
-              onClick={() => setMobileView(mobileView === 'table' ? 'cards' : 'table')}
-              className="md:hidden px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 tactile-btn flex items-center gap-1"
-            >
-              {mobileView === 'table' ? <ListBullets size={14} /> : <Table size={14} />}
-              <span>{mobileView === 'table' ? 'Thẻ' : 'Bảng'}</span>
-            </button>
-
-            <button
-              onClick={handleExportCSV}
-              className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 tactile-btn flex items-center gap-1.5 transition-colors font-medium shadow-2xs"
-              title="Xuất file CSV/Excel"
-            >
-              <DownloadSimple size={14} />
-              <span className="hidden sm:inline">Xuất Excel</span>
-            </button>
           </div>
 
         </div>
