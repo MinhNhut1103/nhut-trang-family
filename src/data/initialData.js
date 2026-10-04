@@ -6,7 +6,7 @@ export const initialProfile = {
 
 export const initialMonthlyConfig = {
   id: '2026-10',
-  banner_focus: 'giảm mua đồ',
+  banner_focus: '',
   han_muc_chi: 30000000,
   daysRemaining: 27,
 };

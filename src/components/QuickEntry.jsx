@@ -7,7 +7,9 @@ export default function QuickEntry({
   onAddTransaction, 
   activeUser, 
   activeVault,
-  onShowToast 
+  onShowToast,
+  categories = categoriesList,
+  macroTypes = macroTypesList
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSmsBox, setShowSmsBox] = useState(false);
@@ -224,7 +226,7 @@ export default function QuickEntry({
                 onChange={(e) => setFormData({ ...formData, phan_loai: e.target.value })}
                 className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
               >
-                {categoriesList.map(cat => (
+                {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -238,7 +240,7 @@ export default function QuickEntry({
                 onChange={(e) => setFormData({ ...formData, loai: e.target.value })}
                 className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
               >
-                {macroTypesList.map(t => (
+                {macroTypes.map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>

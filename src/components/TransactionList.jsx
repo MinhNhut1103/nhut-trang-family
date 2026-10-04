@@ -4,18 +4,22 @@ import {
   DownloadSimple, 
   Table, 
   ListBullets,
-  MagnifyingGlass
+  MagnifyingGlass,
+  SlidersHorizontal,
+  PencilSimple
 } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList } from '../data/initialData';
 
 export default function TransactionList({ 
-  transactions, 
+  transactions = [], 
   onDeleteTransaction, 
   onUpdateTransaction,
+  categories = categoriesList,
+  macroTypes = macroTypesList,
+  onOpenCategoryManager,
   privacyMode, 
   activeVault,
-  activeUser,
-  monthlyConfig 
+  activeUser
 }) {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
@@ -82,6 +86,22 @@ export default function TransactionList({
     document.body.removeChild(link);
   };
 
+  const handleSelectCategory = (txId, val) => {
+    if (val === '__manage__') {
+      if (onOpenCategoryManager) onOpenCategoryManager();
+      return;
+    }
+    if (onUpdateTransaction) onUpdateTransaction(txId, 'phan_loai', val);
+  };
+
+  const handleSelectMacroType = (txId, val) => {
+    if (val === '__manage__') {
+      if (onOpenCategoryManager) onOpenCategoryManager();
+      return;
+    }
+    if (onUpdateTransaction) onUpdateTransaction(txId, 'loai', val);
+  };
+
   return (
     <section className="w-full max-w-5xl mx-auto px-4 md:px-8 py-3 pb-12">
       <div className="card-soft overflow-hidden">
@@ -108,7 +128,7 @@ export default function TransactionList({
               className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500"
             >
               <option value="all">Tất cả phân loại</option>
-              {categoriesList.map(cat => (
+              {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
@@ -120,14 +140,25 @@ export default function TransactionList({
               className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500 hidden sm:block"
             >
               <option value="all">Tất cả loại</option>
-              {macroTypesList.map(t => (
+              {macroTypes.map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
 
-          {/* Nút bấm chuyển chế độ xem & Xuất file */}
+          {/* Nút bấm chuyển chế độ xem & Quản lý danh mục & Xuất file */}
           <div className="flex items-center gap-2">
+            
+            {/* Nút quản lý phân loại & loại */}
+            <button
+              onClick={onOpenCategoryManager}
+              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-lg text-slate-700 tactile-btn flex items-center gap-1.5 transition-colors font-medium shadow-2xs"
+              title="Thêm, sửa, xóa phân loại và loại"
+            >
+              <SlidersHorizontal size={14} />
+              <span>Sửa danh mục</span>
+            </button>
+
             <button
               onClick={() => setMobileView(mobileView === 'table' ? 'cards' : 'table')}
               className="md:hidden px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 tactile-btn flex items-center gap-1"
@@ -139,6 +170,7 @@ export default function TransactionList({
             <button
               onClick={handleExportCSV}
               className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 tactile-btn flex items-center gap-1.5 transition-colors font-medium shadow-2xs"
+              title="Xuất file CSV/Excel"
             >
               <DownloadSimple size={14} />
               <span>Xuất Excel</span>
@@ -147,7 +179,7 @@ export default function TransactionList({
 
         </div>
 
-        {/* 1. DẠNG BẢNG CHUẨN GOOGLE SHEETS Y HỆT HÌNH */}
+        {/* 1. DẠNG BẢNG CHUẨN GOOGLE SHEETS (ĐÃ BỎ DÒNG GIẢM MUA ĐỒ) */}
         {mobileView === 'table' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
@@ -159,37 +191,13 @@ export default function TransactionList({
                   <th className="py-2.5 px-3.5">Nội dung</th>
                   <th className="py-2.5 px-3.5 text-right w-28"># Thu</th>
                   <th className="py-2.5 px-3.5 text-right w-28"># Chi</th>
-                  <th className="py-2.5 px-3.5 text-center w-28">Phân loại</th>
-                  <th className="py-2.5 px-3.5 text-center w-28">Loại</th>
+                  <th className="py-2.5 px-3.5 text-center w-32">Phân loại</th>
+                  <th className="py-2.5 px-3.5 text-center w-32">Loại</th>
                   <th className="py-2.5 px-2 text-right w-12"></th>
                 </tr>
               </thead>
 
               <tbody>
-                {/* Dòng mục tiêu tháng màu vàng y hệt hình */}
-                <tr className="bg-[#FEF08A] font-bold text-slate-900 border-b border-[#FACC15]">
-                  <td className="py-2.5 px-3.5 font-bold">
-                    {monthlyConfig.banner_focus || 'giảm mua đồ'}
-                  </td>
-                  <td className="py-2.5 px-3.5 font-bold">
-                    {monthlyConfig.banner_focus || 'giảm mua đồ'}
-                  </td>
-                  <td className="py-2.5 px-3.5 text-right"></td>
-                  <td className="py-2.5 px-3.5 text-right"></td>
-                  <td className="py-2.5 px-3.5 text-center">
-                    <span className="inline-block px-3 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[11px] font-normal w-24 text-center">
-                      —
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3.5 text-center">
-                    <span className="inline-block px-3 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[11px] font-normal w-24 text-center">
-                      —
-                    </span>
-                  </td>
-                  <td></td>
-                </tr>
-
-                {/* Các dòng dữ liệu thực tế */}
                 {filteredList.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="py-12 text-center text-slate-400">
@@ -231,11 +239,11 @@ export default function TransactionList({
                           {hasChi ? formatMoney(tx.chi) : ''}
                         </td>
 
-                        {/* Phân loại Dropdown (Chuẩn y hệt hình Google Sheets) */}
+                        {/* Phân loại Dropdown có hỗ trợ sửa/thêm */}
                         <td className="py-2 px-2 text-center whitespace-nowrap">
                           <select
-                            value={tx.phan_loai || 'ăn uống'}
-                            onChange={(e) => onUpdateTransaction && onUpdateTransaction(tx.id, 'phan_loai', e.target.value)}
+                            value={tx.phan_loai || (categories[0] || 'ăn uống')}
+                            onChange={(e) => handleSelectCategory(tx.id, e.target.value)}
                             className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/90 text-slate-800 text-[11px] font-medium border border-slate-300/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white cursor-pointer text-center appearance-none pr-5.5 transition-colors relative"
                             style={{
                               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E")`,
@@ -244,17 +252,18 @@ export default function TransactionList({
                               backgroundSize: '10px'
                             }}
                           >
-                            {categoriesList.map(cat => (
+                            {categories.map(cat => (
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
+                            <option value="__manage__">✏️ Sửa danh mục...</option>
                           </select>
                         </td>
 
-                        {/* Loại Dropdown (Chuẩn y hệt hình Google Sheets) */}
+                        {/* Loại Dropdown có hỗ trợ sửa/thêm */}
                         <td className="py-2 px-2 text-center whitespace-nowrap">
                           <select
-                            value={tx.loai || 'thiết yếu'}
-                            onChange={(e) => onUpdateTransaction && onUpdateTransaction(tx.id, 'loai', e.target.value)}
+                            value={tx.loai || (macroTypes[0] || 'thiết yếu')}
+                            onChange={(e) => handleSelectMacroType(tx.id, e.target.value)}
                             className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/90 text-slate-800 text-[11px] font-medium border border-slate-300/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white cursor-pointer text-center appearance-none pr-5.5 transition-colors relative"
                             style={{
                               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E")`,
@@ -263,9 +272,10 @@ export default function TransactionList({
                               backgroundSize: '10px'
                             }}
                           >
-                            {macroTypesList.map(t => (
+                            {macroTypes.map(t => (
                               <option key={t} value={t}>{t}</option>
                             ))}
+                            <option value="__manage__">✏️ Sửa danh mục...</option>
                           </select>
                         </td>
 
@@ -321,24 +331,26 @@ export default function TransactionList({
                     
                     {/* Phân loại trên mobile */}
                     <select
-                      value={tx.phan_loai || 'ăn uống'}
-                      onChange={(e) => onUpdateTransaction && onUpdateTransaction(tx.id, 'phan_loai', e.target.value)}
+                      value={tx.phan_loai || (categories[0] || 'ăn uống')}
+                      onChange={(e) => handleSelectCategory(tx.id, e.target.value)}
                       className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200 focus:outline-none"
                     >
-                      {categoriesList.map(cat => (
+                      {categories.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
+                      <option value="__manage__">✏️ Sửa danh mục...</option>
                     </select>
 
                     {/* Loại trên mobile */}
                     <select
-                      value={tx.loai || 'thiết yếu'}
-                      onChange={(e) => onUpdateTransaction && onUpdateTransaction(tx.id, 'loai', e.target.value)}
+                      value={tx.loai || (macroTypes[0] || 'thiết yếu')}
+                      onChange={(e) => handleSelectMacroType(tx.id, e.target.value)}
                       className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200 focus:outline-none"
                     >
-                      {macroTypesList.map(t => (
+                      {macroTypes.map(t => (
                         <option key={t} value={t}>{t}</option>
                       ))}
+                      <option value="__manage__">✏️ Sửa danh mục...</option>
                     </select>
                   </div>
                 </div>

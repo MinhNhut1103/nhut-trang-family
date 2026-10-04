@@ -6,16 +6,20 @@ import TransactionList from './components/TransactionList';
 import { 
   initialTransactions, 
   initialProfile, 
-  initialMonthlyConfig 
+  initialMonthlyConfig,
+  categoriesList,
+  macroTypesList
 } from './data/initialData';
 import { 
   isSupabaseConfigured, 
   getTransactions, 
   addTransaction, 
   deleteTransaction,
+  updateTransaction,
   getMonthlyConfig,
   updateMonthlyFocus 
 } from './supabaseClient';
+import CategoryManagerModal from './components/CategoryManagerModal';
 import { Check } from '@phosphor-icons/react';
 
 export default function App() {
@@ -41,6 +45,18 @@ export default function App() {
     const saved = localStorage.getItem('nt_transactions');
     return saved ? JSON.parse(saved) : initialTransactions;
   });
+
+  const [categories, setCategories] = useState(() => {
+    const saved = localStorage.getItem('nt_categories');
+    return saved ? JSON.parse(saved) : categoriesList;
+  });
+
+  const [macroTypes, setMacroTypes] = useState(() => {
+    const saved = localStorage.getItem('nt_macro_types');
+    return saved ? JSON.parse(saved) : macroTypesList;
+  });
+
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -86,12 +102,62 @@ export default function App() {
     localStorage.setItem('nt_transactions', JSON.stringify(transactions));
   }, [transactions]);
 
+  useEffect(() => {
+    localStorage.setItem('nt_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  useEffect(() => {
+    localStorage.setItem('nt_macro_types', JSON.stringify(macroTypes));
+  }, [macroTypes]);
+
   // Thông báo nhẹ
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
     }, 2800);
+  };
+
+  // Quản lý CRUD Phân loại
+  const handleAddCategory = (newCat) => {
+    if (!categories.includes(newCat)) {
+      setCategories((prev) => [...prev, newCat]);
+      showToast(`Đã thêm phân loại: ${newCat}`);
+    }
+  };
+
+  const handleUpdateCategory = (oldCat, newCat) => {
+    setCategories((prev) => prev.map((c) => (c === oldCat ? newCat : c)));
+    setTransactions((prev) =>
+      prev.map((t) => (t.phan_loai === oldCat ? { ...t, phan_loai: newCat } : t))
+    );
+    showToast(`Đã đổi tên phân loại thành: ${newCat}`);
+  };
+
+  const handleDeleteCategory = (cat) => {
+    setCategories((prev) => prev.filter((c) => c !== cat));
+    showToast(`Đã xóa phân loại: ${cat}`);
+  };
+
+  // Quản lý CRUD Loại (macro types)
+  const handleAddMacroType = (newType) => {
+    if (!macroTypes.includes(newType)) {
+      setMacroTypes((prev) => [...prev, newType]);
+      showToast(`Đã thêm loại: ${newType}`);
+    }
+  };
+
+  const handleUpdateMacroType = (oldType, newType) => {
+    setMacroTypes((prev) => prev.map((t) => (t === oldType ? newType : t)));
+    setTransactions((prev) =>
+      prev.map((t) => (t.loai === oldType ? { ...t, loai: newType } : t))
+    );
+    showToast(`Đã đổi tên loại thành: ${newType}`);
+  };
+
+  const handleDeleteMacroType = (type) => {
+    setMacroTypes((prev) => prev.filter((t) => t !== type));
+    showToast(`Đã xóa loại: ${type}`);
   };
 
   // Thêm giao dịch
@@ -121,7 +187,7 @@ export default function App() {
     }
   };
 
-  // Cập nhật giao dịch (như đổi Phân loại, Loại)
+  // Cập nhật giao dịch (như đổi Phân loại, Loại trực tiếp trong bảng)
   const handleUpdateTransaction = async (id, field, value) => {
     setTransactions((prev) =>
       prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
@@ -149,6 +215,20 @@ export default function App() {
         </div>
       )}
 
+      {/* Modal Quản lý Phân loại và Loại */}
+      <CategoryManagerModal
+        isOpen={isCategoryManagerOpen}
+        onClose={() => setIsCategoryManagerOpen(false)}
+        categories={categories}
+        macroTypes={macroTypes}
+        onAddCategory={handleAddCategory}
+        onUpdateCategory={handleUpdateCategory}
+        onDeleteCategory={handleDeleteCategory}
+        onAddMacroType={handleAddMacroType}
+        onUpdateMacroType={handleUpdateMacroType}
+        onDeleteMacroType={handleDeleteMacroType}
+      />
+
       {/* Nội dung chính */}
       <main>
         {/* Đầu trang */}
@@ -159,7 +239,7 @@ export default function App() {
           setPrivacyMode={setPrivacyMode}
         />
 
-        {/* Tổng quan & Banner mục tiêu tháng 10 */}
+        {/* Tổng quan tháng 10 */}
         <BudgetPulse
           monthlyConfig={monthlyConfig}
           setMonthlyConfig={setMonthlyConfig}
@@ -176,6 +256,8 @@ export default function App() {
           activeUser={activeUser}
           activeVault={activeVault}
           onShowToast={showToast}
+          categories={categories}
+          macroTypes={macroTypes}
         />
 
         {/* Bảng sổ kế toán chuẩn Google Sheets */}
@@ -187,6 +269,9 @@ export default function App() {
           activeVault={activeVault}
           activeUser={activeUser}
           monthlyConfig={monthlyConfig}
+          categories={categories}
+          macroTypes={macroTypes}
+          onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
         />
       </main>
 
