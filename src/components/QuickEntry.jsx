@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, CaretDown, CaretUp, Check } from '@phosphor-icons/react';
-import { categoriesList, macroTypesList } from '../data/initialData';
+import { Plus, CaretDown, CaretUp, Check, Clock } from '@phosphor-icons/react';
+import { categoriesList, macroTypesList, getCurrentTime } from '../data/initialData';
 import { parseBankSMS } from '../utils/parser';
 
 export default function QuickEntry({ 
@@ -17,6 +17,7 @@ export default function QuickEntry({
 
   const [formData, setFormData] = useState({
     ngay: new Date().toISOString().split('T')[0],
+    gio: getCurrentTime(),
     noi_dung: '',
     actionType: 'chi', // 'chi' | 'thu'
     so_tien: '',
@@ -40,6 +41,7 @@ export default function QuickEntry({
     const newTx = {
       id: 'tx-' + Date.now(),
       ngay: new Date().toISOString().split('T')[0],
+      gio: getCurrentTime(),
       noi_dung: item.label,
       thu: item.type === 'thu' ? item.amount : 0,
       chi: item.type === 'chi' ? item.amount : 0,
@@ -64,6 +66,7 @@ export default function QuickEntry({
     const newTx = {
       id: 'tx-' + Date.now(),
       ngay: formData.ngay || new Date().toISOString().split('T')[0],
+      gio: formData.gio || getCurrentTime(),
       noi_dung: formData.noi_dung.trim(),
       thu: formData.actionType === 'thu' ? num : 0,
       chi: formData.actionType === 'chi' ? num : 0,
@@ -80,6 +83,7 @@ export default function QuickEntry({
     // Reset form giữ ngày
     setFormData(prev => ({
       ...prev,
+      gio: getCurrentTime(),
       noi_dung: '',
       so_tien: '',
       ghi_chu: ''
@@ -163,19 +167,31 @@ export default function QuickEntry({
           </div>
         )}
 
-        {/* Biểu mẫu chi tiết (chuẩn các cột trong hình) */}
+        {/* Biểu mẫu chi tiết */}
         {isExpanded && (
-          <form onSubmit={handleSubmit} className="pt-3 border-t border-slate-100 grid grid-cols-2 md:grid-cols-6 gap-2.5 text-xs">
+          <form onSubmit={handleSubmit} className="pt-3 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
             
             {/* Ngày */}
-            <div className="col-span-2 md:col-span-1">
+            <div className="col-span-1 md:col-span-1">
               <label className="block text-slate-500 mb-1 font-medium">Ngày</label>
               <input
                 type="date"
                 required
                 value={formData.ngay}
                 onChange={(e) => setFormData({ ...formData, ngay: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white text-xs font-medium"
+              />
+            </div>
+
+            {/* Giờ */}
+            <div className="col-span-1 md:col-span-1">
+              <label className="block text-slate-500 mb-1 font-medium">Giờ</label>
+              <input
+                type="time"
+                required
+                value={formData.gio}
+                onChange={(e) => setFormData({ ...formData, gio: e.target.value })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white text-xs font-mono font-medium"
               />
             </div>
 
@@ -261,7 +277,7 @@ export default function QuickEntry({
             </div>
 
             {/* Nút thêm */}
-            <div className="col-span-2 md:col-span-4 flex items-end">
+            <div className="col-span-1 md:col-span-3 flex items-end">
               <button
                 type="submit"
                 className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-semibold text-xs tactile-btn flex items-center justify-center gap-1.5 shadow-xs"

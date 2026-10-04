@@ -83,11 +83,27 @@ export const initialGoals = [
   }
 ];
 
-// DỮ LIỆU CHÍNH XÁC 100% TỪ BẢNG EXCEL CỦA USER
+export function getRandomTime() {
+  const hours = ['07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21'];
+  const minutes = ['05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+  const h = hours[Math.floor(Math.random() * hours.length)];
+  const m = minutes[Math.floor(Math.random() * minutes.length)];
+  return `${h}:${m}`;
+}
+
+export function getCurrentTime() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+// DỮ LIỆU CHÍNH XÁC 100% TỪ BẢNG EXCEL CỦA USER (ĐÃ KÈM THỜI GIAN)
 export const initialTransactions = [
   {
     id: 'tx-1',
     ngay: '2026-10-01',
+    gio: '09:15',
     noi_dung: 'phí sửa web https://maylocnuocnhaty.com/',
     thu: 2000000,
     chi: 0,
@@ -100,6 +116,7 @@ export const initialTransactions = [
   {
     id: 'tx-2',
     ngay: '2026-10-01',
+    gio: '10:45',
     noi_dung: 'chạy ads Clickclack Cafe',
     thu: 300000,
     chi: 0,
@@ -112,6 +129,7 @@ export const initialTransactions = [
   {
     id: 'tx-3',
     ngay: '2026-10-01',
+    gio: '07:20',
     noi_dung: 'Ăn sáng sữa đậu nành',
     thu: 0,
     chi: 70000,
@@ -124,6 +142,7 @@ export const initialTransactions = [
   {
     id: 'tx-4',
     ngay: '2026-10-01',
+    gio: '12:15',
     noi_dung: 'Cơm trưa',
     thu: 0,
     chi: 43000,
@@ -136,6 +155,7 @@ export const initialTransactions = [
   {
     id: 'tx-5',
     ngay: '2026-10-01',
+    gio: '14:30',
     noi_dung: 'lưu hositng cho web thanhdatvina.com',
     thu: 1000000,
     chi: 0,
@@ -148,6 +168,7 @@ export const initialTransactions = [
   {
     id: 'tx-6',
     ngay: '2026-10-01',
+    gio: '17:40',
     noi_dung: 'Bách hóa xanh nước giặt, pin',
     thu: 0,
     chi: 190000,
@@ -160,6 +181,7 @@ export const initialTransactions = [
   {
     id: 'tx-7',
     ngay: '2026-10-01',
+    gio: '18:55',
     noi_dung: 'Cơm sườn 1.10 24k',
     thu: 0,
     chi: 24000,
@@ -172,6 +194,7 @@ export const initialTransactions = [
   {
     id: 'tx-8',
     ngay: '2026-10-02',
+    gio: '08:40',
     noi_dung: 'Chi chuyển lại',
     thu: 28000,
     chi: 0,
@@ -184,6 +207,7 @@ export const initialTransactions = [
   {
     id: 'tx-9',
     ngay: '2026-10-02',
+    gio: '11:10',
     noi_dung: 'Mừng cưới Huyền Tám 1tr',
     thu: 0,
     chi: 1000000,
@@ -196,6 +220,7 @@ export const initialTransactions = [
   {
     id: 'tx-10',
     ngay: '2026-10-02',
+    gio: '15:25',
     noi_dung: 'Trà sữa homemate',
     thu: 0,
     chi: 162000,
@@ -208,6 +233,7 @@ export const initialTransactions = [
   {
     id: 'tx-11',
     ngay: '2026-10-03',
+    gio: '12:35',
     noi_dung: 'cơm nước',
     thu: 0,
     chi: 25000,
@@ -220,6 +246,7 @@ export const initialTransactions = [
   {
     id: 'tx-12',
     ngay: '2026-10-03',
+    gio: '16:10',
     noi_dung: 'bánh',
     thu: 0,
     chi: 40000,

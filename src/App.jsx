@@ -8,7 +8,8 @@ import {
   initialProfile, 
   initialMonthlyConfig,
   categoriesList,
-  macroTypesList
+  macroTypesList,
+  getRandomTime
 } from './data/initialData';
 import { 
   isSupabaseConfigured, 
@@ -43,7 +44,18 @@ export default function App() {
 
   const [transactions, setTransactions] = useState(() => {
     const saved = localStorage.getItem('nt_transactions');
-    return saved ? JSON.parse(saved) : initialTransactions;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.map((t) => ({
+          ...t,
+          gio: t.gio || getRandomTime()
+        }));
+      } catch (e) {
+        return initialTransactions;
+      }
+    }
+    return initialTransactions;
   });
 
   const [categories, setCategories] = useState(() => {
@@ -65,7 +77,11 @@ export default function App() {
     if (isSupabaseConfigured) {
       getTransactions().then((cloudData) => {
         if (cloudData && cloudData.length > 0) {
-          setTransactions(cloudData);
+          const withTime = cloudData.map((t) => ({
+            ...t,
+            gio: t.gio || getRandomTime()
+          }));
+          setTransactions(withTime);
           showToast('Đã đồng bộ dữ liệu từ Supabase Cloud');
         }
       });

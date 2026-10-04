@@ -1,7 +1,4 @@
-/**
- * Smart SMS & Natural Language Transaction Parser
- * Bóc tách theo đúng các cột: ngay, noi_dung, thu, chi, phan_loai, loai, vault, author
- */
+import { getCurrentTime } from '../data/initialData';
 
 export function parseBankSMS(text, activeUser = 'nhut') {
   if (!text || typeof text !== 'string') return null;
@@ -15,6 +12,13 @@ export function parseBankSMS(text, activeUser = 'nhut') {
   let vault = 'shared';
   const author = activeUser === 'nhut' ? 'Nhựt' : 'Trang';
   const today = new Date().toISOString().split('T')[0];
+  
+  // Trích xuất giờ nếu có trong tin nhắn (ví dụ: luc 18:22 hoặc 18:22)
+  let gio = getCurrentTime();
+  const timeMatch = cleanText.match(/(?:luc|lúc|vao|vào|at)?\s*([0-2]?[0-9]:[0-5][0-9])/i);
+  if (timeMatch && timeMatch[1]) {
+    gio = timeMatch[1];
+  }
 
   // 1. Kiểm tra Thu (+) hay Chi (-)
   if (text.includes('+') || text.toLowerCase().includes('nhan duoc') || text.toLowerCase().includes('chuyen khoan den')) {
@@ -89,6 +93,7 @@ export function parseBankSMS(text, activeUser = 'nhut') {
   return {
     id: 'tx-' + Date.now(),
     ngay: today,
+    gio: gio || getCurrentTime(),
     noi_dung: noi_dung || 'Giao dịch ngân hàng',
     thu: isIncome ? (amount || 1000000) : 0,
     chi: !isIncome ? (amount || 50000) : 0,
@@ -161,6 +166,7 @@ export function parseNaturalVoicePrompt(prompt, activeUser = 'nhut') {
   return {
     id: 'tx-' + Date.now(),
     ngay: today,
+    gio: getCurrentTime(),
     noi_dung: prompt.trim().slice(0, 50),
     thu: isIncome ? (amount || 500000) : 0,
     chi: !isIncome ? (amount || 45000) : 0,

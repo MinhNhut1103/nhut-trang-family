@@ -6,7 +6,8 @@ import {
   ListBullets,
   MagnifyingGlass,
   SlidersHorizontal,
-  PencilSimple
+  PencilSimple,
+  Clock
 } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList } from '../data/initialData';
 
@@ -61,9 +62,10 @@ export default function TransactionList({
 
   // Xuất file CSV
   const handleExportCSV = () => {
-    const headers = ['Ngày', 'Nội dung', 'Thu', 'Chi', 'Phân loại', 'Loại', 'Không gian', 'Người ghi', 'Ghi chú'];
+    const headers = ['Ngày', 'Giờ', 'Nội dung', 'Thu', 'Chi', 'Phân loại', 'Loại', 'Không gian', 'Người ghi', 'Ghi chú'];
     const rows = filteredList.map(t => [
       t.ngay,
+      t.gio || '',
       `"${(t.noi_dung || '').replace(/"/g, '""')}"`,
       t.thu || 0,
       t.chi || 0,
@@ -187,7 +189,7 @@ export default function TransactionList({
               {/* Tiêu đề bảng màu xanh lá đậm như hình */}
               <thead>
                 <tr className="bg-[#1B4D3E] text-white border-b border-emerald-900 font-semibold tracking-wide">
-                  <th className="py-2.5 px-3.5 w-24">Ngày</th>
+                  <th className="py-2.5 px-3.5 w-28">Ngày & Giờ</th>
                   <th className="py-2.5 px-3.5">Nội dung</th>
                   <th className="py-2.5 px-3.5 text-right w-28"># Thu</th>
                   <th className="py-2.5 px-3.5 text-right w-28"># Chi</th>
@@ -214,9 +216,15 @@ export default function TransactionList({
                         key={tx.id} 
                         className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors group"
                       >
-                        {/* Ngày */}
-                        <td className="py-2.5 px-3.5 tabular-nums text-slate-600 whitespace-nowrap font-medium">
-                          {tx.ngay}
+                        {/* Ngày & Giờ */}
+                        <td className="py-2.5 px-3.5 tabular-nums text-slate-600 whitespace-nowrap">
+                          <div className="font-medium text-slate-800 leading-tight">
+                            {tx.ngay}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
+                            <Clock size={11} className="text-slate-400 shrink-0" />
+                            <span>{tx.gio || '08:00'}</span>
+                          </div>
                         </td>
 
                         {/* Nội dung */}
@@ -327,7 +335,12 @@ export default function TransactionList({
                   </div>
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
                     <span className="tabular-nums font-mono">{tx.ngay}</span>
-                    <span>•</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="tabular-nums font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5">
+                      <Clock size={10} className="text-slate-400 shrink-0" />
+                      <span>{tx.gio || '08:00'}</span>
+                    </span>
+                    <span className="text-slate-300">•</span>
                     
                     {/* Phân loại trên mobile */}
                     <select
