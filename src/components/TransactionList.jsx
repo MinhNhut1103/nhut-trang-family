@@ -221,7 +221,7 @@ export default function TransactionList({
                           <div className="font-medium text-slate-800 leading-tight">
                             {tx.ngay}
                           </div>
-                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
+                          <div className="text-[11px] text-slate-400 tabular-nums flex items-center gap-1 mt-0.5 font-medium">
                             <Clock size={11} className="text-slate-400 shrink-0" />
                             <span>{tx.gio || '08:00'}</span>
                           </div>
@@ -334,9 +334,9 @@ export default function TransactionList({
                     {tx.noi_dung}
                   </div>
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
-                    <span className="tabular-nums font-mono">{tx.ngay}</span>
+                    <span className="tabular-nums font-medium">{tx.ngay}</span>
                     <span className="text-slate-300">•</span>
-                    <span className="tabular-nums font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5">
+                    <span className="tabular-nums text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5">
                       <Clock size={10} className="text-slate-400 shrink-0" />
                       <span>{tx.gio || '08:00'}</span>
                     </span>

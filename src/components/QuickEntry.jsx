@@ -159,7 +159,7 @@ export default function QuickEntry({
               onClick={() => handleOpenQuickConfirm(item)}
               className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200 border border-slate-200/80 text-xs font-medium text-slate-700 tactile-btn transition-colors cursor-pointer"
             >
-              {item.label} <span className="font-semibold text-slate-900 ml-1">{new Intl.NumberFormat('vi-VN').format(item.amount)} đ</span>
+              {item.label} <span className="font-semibold text-slate-900 ml-1 tabular-nums font-money">{new Intl.NumberFormat('vi-VN').format(item.amount)} đ</span>
             </button>
           ))}
         </div>
@@ -212,7 +212,7 @@ export default function QuickEntry({
                 required
                 value={formData.gio}
                 onChange={(e) => setFormData({ ...formData, gio: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white text-xs font-mono font-medium"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white text-xs tabular-nums font-medium"
               />
             </div>
 
@@ -397,7 +397,7 @@ export default function QuickEntry({
               {/* Thời gian */}
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">Thời gian:</span>
-                <span className="font-mono text-slate-600 tabular-nums">
+                <span className="text-slate-600 tabular-nums font-medium">
                   {confirmingQuickItem.ngay} • {confirmingQuickItem.gio}
                 </span>
               </div>

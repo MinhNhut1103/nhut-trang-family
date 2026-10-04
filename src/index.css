@@ -3,7 +3,7 @@
 @layer base {
   :root {
     --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-mono: 'Be Vietnam Pro', monospace;
   }
 
   body {
@@ -13,10 +13,12 @@
     overflow-x: hidden;
   }
 
-  /* Căn chỉnh số liệu kế toán thẳng hàng */
-  .tabular-nums {
-    font-family: var(--font-mono);
-    font-feature-settings: "tnum" 1, "zero" 1;
+  /* Đồng nhất 100% font chữ của toàn bộ số tiền theo font Gemini (Be Vietnam Pro) */
+  .tabular-nums,
+  .font-money {
+    font-family: var(--font-sans) !important;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
   }
 }
 
