@@ -14,6 +14,10 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+export const isSchemaMissing = (error) => {
+  return Boolean(error && (error.code === 'PGRST205' || error.message?.includes('schema cache')));
+};
+
 // Helper API functions
 export async function getTransactions() {
   if (!supabase) return null;
@@ -24,7 +28,9 @@ export async function getTransactions() {
     .order('created_at', { ascending: false });
   
   if (error) {
-    console.error('Error fetching transactions:', error);
+    if (!isSchemaMissing(error)) {
+      console.error('Error fetching transactions:', error);
+    }
     return null;
   }
   return data;
@@ -82,7 +88,9 @@ export async function getMonthlyConfig(monthId = '2026-10') {
     .single();
 
   if (error && error.code !== 'PGRST116') {
-    console.error('Error fetching monthly config:', error);
+    if (!isSchemaMissing(error)) {
+      console.error('Error fetching monthly config:', error);
+    }
   }
   return data;
 }
@@ -95,7 +103,9 @@ export async function getAllMonthlyConfigs() {
     .order('id', { ascending: false });
   
   if (error) {
-    console.error('Error fetching all monthly configs:', error);
+    if (!isSchemaMissing(error)) {
+      console.error('Error fetching all monthly configs:', error);
+    }
     return null;
   }
   return data;
@@ -117,7 +127,9 @@ export async function upsertMonthlyConfig(config) {
     .select();
   
   if (error) {
-    console.error('Error upserting monthly config:', error);
+    if (!isSchemaMissing(error)) {
+      console.error('Error upserting monthly config:', error);
+    }
     throw error;
   }
   return data[0];
@@ -146,7 +158,9 @@ export async function getFamilyMembers() {
     .order('created_at', { ascending: true });
   
   if (error) {
-    console.error('Error fetching family_members from Supabase:', error);
+    if (!isSchemaMissing(error)) {
+      console.error('Error fetching family_members from Supabase:', error);
+    }
     return null;
   }
   return data;
