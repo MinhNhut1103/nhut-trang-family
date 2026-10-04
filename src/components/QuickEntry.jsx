@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, CaretDown, CaretUp, Check, Clock, X } from '@phosphor-icons/react';
+import { Plus, CaretDown, CaretUp, Check, Clock, X, ChatText, PencilSimple } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList, getCurrentTime } from '../data/initialData';
 import { parseBankSMS } from '../utils/parser';
 
@@ -216,81 +216,84 @@ export default function QuickEntry({
       <div className="card-soft p-4 md:p-5">
         
         {/* Nút bấm nhanh thường dùng */}
-        <div className="flex flex-col gap-2.5 mb-3">
+        <div className="flex flex-col gap-2.5 mb-2.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-700">
-                Thêm nhanh thường dùng:
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsAddingPreset(true)}
-                className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-200/60 flex items-center gap-1 transition-colors"
-                title="Tự tạo mục chi tiêu thường dùng"
-              >
-                <Plus size={12} weight="bold" />
-                <span>Thêm mục</span>
-              </button>
-            </div>
+            <span className="text-xs font-bold text-slate-800">
+              Thêm nhanh thường dùng:
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsAddingPreset(true)}
+              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors tactile-btn shadow-2xs"
+              title="Tự tạo mục chi tiêu thường dùng"
+            >
+              <Plus size={13} weight="bold" />
+              <span>Thêm mục</span>
+            </button>
           </div>
 
           {/* Danh sách nút bấm nhanh */}
           <div className="flex flex-wrap items-center gap-2">
-          {quickList.length === 0 ? (
-            <div className="text-xs text-slate-400 py-1 flex items-center gap-2">
-              <span>Chưa có mục mẫu sẵn.</span>
-              <button
-                type="button"
-                onClick={() => setIsAddingPreset(true)}
-                className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 hover:underline"
-              >
-                <Plus size={13} weight="bold" />
-                <span>Thêm mục thường dùng thủ công</span>
-              </button>
-            </div>
-          ) : (
-            quickList.map((item, idx) => (
-              <div key={idx} className="inline-flex items-center group">
+            {quickList.length === 0 ? (
+              <div className="text-xs text-slate-400 py-1 flex items-center gap-2">
+                <span>Chưa có mục mẫu sẵn.</span>
                 <button
                   type="button"
-                  onClick={() => handleOpenQuickConfirm(item)}
-                  className="px-2.5 py-1.5 rounded-l-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200 border border-r-0 border-slate-200/80 text-xs font-medium text-slate-700 tactile-btn transition-colors cursor-pointer"
+                  onClick={() => setIsAddingPreset(true)}
+                  className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 hover:underline"
                 >
-                  {item.label} <span className="font-semibold text-slate-900 ml-1 tabular-nums font-money">{new Intl.NumberFormat('vi-VN').format(item.amount)} đ</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDeletePreset(idx)}
-                  className="px-1.5 py-1.5 rounded-r-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 border border-slate-200/80 text-slate-400 text-xs transition-colors"
-                  title="Xóa mục này"
-                >
-                  <X size={12} />
+                  <Plus size={13} weight="bold" />
+                  <span>Tạo mục thường dùng</span>
                 </button>
               </div>
-            ))
-          )}
-        </div>
+            ) : (
+              quickList.map((item, idx) => (
+                <div key={idx} className="inline-flex items-center group shadow-2xs rounded-xl overflow-hidden border border-slate-200 hover:border-emerald-300 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenQuickConfirm(item)}
+                    className="px-3 py-1.5 bg-white hover:bg-emerald-50/70 text-slate-700 hover:text-emerald-800 text-xs font-medium tactile-btn transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>{item.label}</span>
+                    <span className="font-bold text-slate-900 tabular-nums font-money">
+                      {new Intl.NumberFormat('vi-VN').format(item.amount)} đ
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePreset(idx)}
+                    className="px-2 py-1.5 bg-slate-50 hover:bg-rose-50 hover:text-rose-600 border-l border-slate-200/80 text-slate-400 text-xs transition-colors"
+                    title="Xóa mục này"
+                  >
+                    <X size={12} weight="bold" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
 
-        {/* Hàng hành động bổ sung: dán sms và mở biểu mẫu (xuống hàng riêng, thoáng đãng) */}
-        <div className="flex items-center gap-3 pt-2 pb-1 text-xs border-t border-slate-100 text-slate-500">
-          <button
-            type="button"
-            onClick={() => setShowSmsBox(!showSmsBox)}
-            className="hover:text-slate-800 underline"
-          >
-            {showSmsBox ? 'Đóng hộp tin nhắn' : 'Dán tin nhắn ngân hàng'}
-          </button>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
-          >
-            <span>{isExpanded ? 'Thu gọn biểu mẫu' : 'Mở biểu mẫu nhập chi tiết'}</span>
-            {isExpanded ? <CaretUp size={13} /> : <CaretDown size={13} />}
-          </button>
+          {/* Hàng 2 nút hành động riêng biệt (không dùng chấm floating, không bị rớt chữ) */}
+          <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setShowSmsBox(!showSmsBox)}
+              className="w-full py-2 px-2.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors tactile-btn shadow-2xs"
+            >
+              <ChatText size={15} className="text-emerald-700 shrink-0" />
+              <span>{showSmsBox ? 'Đóng SMS' : 'Dán SMS ngân hàng'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="w-full py-2 px-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/70 hover:bg-emerald-100/70 text-emerald-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors tactile-btn shadow-2xs"
+            >
+              <PencilSimple size={15} className="text-emerald-700 shrink-0" />
+              <span>{isExpanded ? 'Thu gọn' : 'Nhập chi tiết'}</span>
+              {isExpanded ? <CaretUp size={13} weight="bold" /> : <CaretDown size={13} weight="bold" />}
+            </button>
+          </div>
         </div>
-      </div>
 
         {/* Hộp dán tin nhắn ngân hàng */}
         {showSmsBox && (

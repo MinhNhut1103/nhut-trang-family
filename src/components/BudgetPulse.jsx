@@ -209,51 +209,50 @@ export default function BudgetPulse({
 
       </div>
 
-      {/* 3. KHỐI HIỂN THỊ GHI CHÚ RIÊNG CỦA THÁNG (NOTE) */}
-      <div className="card-soft p-3 sm:p-4 mb-2 bg-gradient-to-r from-emerald-50/40 via-white to-slate-50/40 border border-emerald-100/80">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1.5 flex-1 min-w-0">
-            
-            {/* Header của Note */}
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                <Note size={14} weight="bold" />
-              </div>
-              <span className="text-xs font-bold text-slate-800">
-                Ghi chú {currentMonthLabel}
-              </span>
-              {monthFocus && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-100/70 text-emerald-800 px-2 py-0.5 rounded-full">
-                  <Target size={12} weight="bold" />
-                  <span className="truncate max-w-[200px] sm:max-w-xs">{monthFocus}</span>
-                </span>
-              )}
+      {/* 3. KHỐI HIỂN THỊ GHI CHÚ RIÊNG CỦA THÁNG (NOTE CARD SANG TRỌNG) */}
+      <div className="card-soft p-3.5 sm:p-4 mb-3 bg-gradient-to-br from-emerald-50/50 via-white to-slate-50/60 border border-emerald-100/90 shadow-2xs">
+        
+        {/* Header ghi chú */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 shadow-2xs">
+              <Note size={15} weight="bold" />
             </div>
-
-            {/* Nội dung Note */}
-            {monthNote ? (
-              <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed whitespace-pre-line pl-8 font-normal">
-                {monthNote}
-              </p>
-            ) : (
-              <p className="text-xs text-slate-400 italic pl-8">
-                Chưa có ghi chú nào cho {currentMonthLabel}. Bấm nút bên cạnh để thêm lời nhắc, mục tiêu riêng của tháng.
-              </p>
+            <span className="text-xs sm:text-sm font-bold text-slate-800">
+              Ghi chú {currentMonthLabel}
+            </span>
+            {monthFocus && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-100/80 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+                <Target size={12} weight="bold" />
+                <span className="truncate max-w-[160px] sm:max-w-xs">{monthFocus}</span>
+              </span>
             )}
-
           </div>
 
-          {/* Nút sửa nhanh ghi chú */}
           <button
             type="button"
             onClick={onOpenMonthManager}
-            className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-white hover:bg-slate-100 border border-slate-200/80 text-slate-600 hover:text-emerald-700 text-xs font-semibold flex items-center gap-1 transition-colors shrink-0 shadow-2xs"
+            className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-emerald-700 text-xs font-semibold flex items-center gap-1 transition-colors shrink-0 shadow-2xs tactile-btn"
             title="Chỉnh sửa ghi chú & mục tiêu tháng này"
           >
             <PencilSimple size={14} weight="bold" />
             <span className="hidden sm:inline">{monthNote ? 'Sửa ghi chú' : 'Thêm ghi chú'}</span>
           </button>
         </div>
+
+        {/* Khung nội dung ghi chú mềm mại, tinh tế */}
+        <div className="bg-white/90 rounded-xl p-3 border border-emerald-100/80 shadow-2xs">
+          {monthNote ? (
+            <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed whitespace-pre-line font-normal">
+              {monthNote}
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400 italic">
+              Chưa có ghi chú nào cho {currentMonthLabel}. Bấm nút sửa để thêm lời nhắc hoặc mục tiêu riêng của tháng.
+            </p>
+          )}
+        </div>
+
       </div>
 
     </section>
