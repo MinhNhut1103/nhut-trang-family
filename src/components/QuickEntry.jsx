@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, CaretDown, CaretUp, Check, Clock, X } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList, getCurrentTime } from '../data/initialData';
 import { parseBankSMS } from '../utils/parser';
@@ -16,6 +16,18 @@ export default function QuickEntry({
   const [showSmsBox, setShowSmsBox] = useState(false);
   const [smsText, setSmsText] = useState('');
   const [confirmingQuickItem, setConfirmingQuickItem] = useState(null);
+
+  // Hỗ trợ phím Esc để tắt popup xác nhận thêm nhanh
+  useEffect(() => {
+    if (!confirmingQuickItem) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setConfirmingQuickItem(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmingQuickItem]);
 
   const [formData, setFormData] = useState({
     ngay: new Date().toISOString().split('T')[0],

@@ -18,6 +18,18 @@ export default function CategoryManagerModal({
   const [editingIndex, setEditingIndex] = useState(null);
   const [editingValue, setEditingValue] = useState('');
 
+  // Hỗ trợ phím Esc để tắt popup
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const isCat = activeTab === 'category';
@@ -76,8 +88,14 @@ export default function CategoryManagerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
+    <div 
+      className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-md bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Tiêu đề & Nút đóng */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">

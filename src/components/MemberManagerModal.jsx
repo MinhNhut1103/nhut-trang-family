@@ -22,6 +22,18 @@ export default function MemberManagerModal({
     color: 'emerald'
   });
 
+  // Hỗ trợ phím Esc để tắt modal quản lý thành viên
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const startAdd = () => {
@@ -109,8 +121,14 @@ export default function MemberManagerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-      <div className="w-full max-w-lg bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
+    <div 
+      className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-lg bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Tiêu đề & Nút đóng */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">

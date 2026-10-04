@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Eye, 
   EyeSlash, 
@@ -21,6 +21,18 @@ export default function Header({
   onOpenMemberManager
 }) {
   const [showConfigModal, setShowConfigModal] = useState(false);
+
+  // Hỗ trợ phím Esc để tắt popup thông tin Supabase
+  useEffect(() => {
+    if (!showConfigModal) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowConfigModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showConfigModal]);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-8 py-3">
@@ -119,8 +131,14 @@ export default function Header({
 
       {/* Hộp thoại thông tin Supabase */}
       {showConfigModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setShowConfigModal(false)}
+        >
+          <div 
+            className="w-full max-w-md bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-sm">
                 Trạng Thái Dữ Liệu
