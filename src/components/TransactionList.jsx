@@ -11,6 +11,7 @@ import { categoriesList, macroTypesList } from '../data/initialData';
 export default function TransactionList({ 
   transactions, 
   onDeleteTransaction, 
+  onUpdateTransaction,
   privacyMode, 
   activeVault,
   activeUser,
@@ -230,18 +231,42 @@ export default function TransactionList({
                           {hasChi ? formatMoney(tx.chi) : ''}
                         </td>
 
-                        {/* Phân loại (Dạng dropdown pill bo tròn màu xám y hệt hình) */}
-                        <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
-                          <span className="inline-block px-3 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200/80 w-24 text-center">
-                            {tx.phan_loai}
-                          </span>
+                        {/* Phân loại Dropdown (Chuẩn y hệt hình Google Sheets) */}
+                        <td className="py-2 px-2 text-center whitespace-nowrap">
+                          <select
+                            value={tx.phan_loai || 'ăn uống'}
+                            onChange={(e) => onUpdateTransaction && onUpdateTransaction(tx.id, 'phan_loai', e.target.value)}
+                            className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/90 text-slate-800 text-[11px] font-medium border border-slate-300/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white cursor-pointer text-center appearance-none pr-5.5 transition-colors relative"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 6px center',
+                              backgroundSize: '10px'
+                            }}
+                          >
+                            {categoriesList.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
                         </td>
 
-                        {/* Loại (Dạng dropdown pill bo tròn màu xám y hệt hình) */}
-                        <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
-                          <span className="inline-block px-3 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200/80 w-24 text-center">
-                            {tx.loai}
-                          </span>
+                        {/* Loại Dropdown (Chuẩn y hệt hình Google Sheets) */}
+                        <td className="py-2 px-2 text-center whitespace-nowrap">
+                          <select
+                            value={tx.loai || 'thiết yếu'}
+                            onChange={(e) => onUpdateTransaction && onUpdateTransaction(tx.id, 'loai', e.target.value)}
+                            className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/90 text-slate-800 text-[11px] font-medium border border-slate-300/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white cursor-pointer text-center appearance-none pr-5.5 transition-colors relative"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 6px center',
+                              backgroundSize: '10px'
+                            }}
+                          >
+                            {macroTypesList.map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
                         </td>
 
                         {/* Thao tác xóa */}
@@ -290,14 +315,31 @@ export default function TransactionList({
                   <div className="text-xs font-semibold text-slate-900 truncate">
                     {tx.noi_dung}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                    <span>{tx.ngay}</span>
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
+                    <span className="tabular-nums font-mono">{tx.ngay}</span>
                     <span>•</span>
-                    <span className="px-1.5 py-0.2 bg-slate-100 rounded text-slate-600">
-                      {tx.phan_loai}
-                    </span>
-                    <span>•</span>
-                    <span className="text-slate-400">{tx.loai}</span>
+                    
+                    {/* Phân loại trên mobile */}
+                    <select
+                      value={tx.phan_loai || 'ăn uống'}
+                      onChange={(e) => onUpdateTransaction && onUpdateTransaction(tx.id, 'phan_loai', e.target.value)}
+                      className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200 focus:outline-none"
+                    >
+                      {categoriesList.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+
+                    {/* Loại trên mobile */}
+                    <select
+                      value={tx.loai || 'thiết yếu'}
+                      onChange={(e) => onUpdateTransaction && onUpdateTransaction(tx.id, 'loai', e.target.value)}
+                      className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200 focus:outline-none"
+                    >
+                      {macroTypesList.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

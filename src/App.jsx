@@ -121,6 +121,21 @@ export default function App() {
     }
   };
 
+  // Cập nhật giao dịch (như đổi Phân loại, Loại)
+  const handleUpdateTransaction = async (id, field, value) => {
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
+    );
+
+    if (isSupabaseConfigured) {
+      try {
+        await updateTransaction(id, { [field]: value });
+      } catch (err) {
+        console.error('Lỗi cập nhật Supabase:', err);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col justify-between">
       
@@ -167,6 +182,7 @@ export default function App() {
         <TransactionList
           transactions={transactions}
           onDeleteTransaction={handleDeleteTransaction}
+          onUpdateTransaction={handleUpdateTransaction}
           privacyMode={privacyMode}
           activeVault={activeVault}
           activeUser={activeUser}

@@ -12,22 +12,24 @@ export const initialMonthlyConfig = {
 };
 
 export const categoriesList = [
+  'di chuyển',
   'ăn uống',
-  'công việc',
   'tiêu hao',
-  'biếu tặng',
+  'quần áo',
+  'điện tử',
+  'giải trí',
+  'làm đẹp',
+  'công việc',
+  'mượn tiền',
   'nhà cửa',
-  'con cái',
-  'đi lại',
-  'khác'
+  'học phí',
+  'biếu tặng'
 ];
 
 export const macroTypesList = [
   'thiết yếu',
-  'công việc',
-  'hưởng thụ',
-  'tiết kiệm',
-  'đầu tư'
+  'không thiết yếu',
+  'công việc'
 ];
 
 export const quickPresets = [

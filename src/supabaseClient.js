@@ -58,6 +58,21 @@ export async function deleteTransaction(id) {
   return true;
 }
 
+export async function updateTransaction(id, updates) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('transactions')
+    .update(updates)
+    .eq('id', id)
+    .select();
+  
+  if (error) {
+    console.error('Error updating transaction:', error);
+    throw error;
+  }
+  return data[0];
+}
+
 export async function getMonthlyConfig(monthId = '2026-10') {
   if (!supabase) return null;
   const { data, error } = await supabase
