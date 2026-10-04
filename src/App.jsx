@@ -19,7 +19,11 @@ import {
   deleteTransaction,
   updateTransaction,
   getMonthlyConfig,
-  updateMonthlyFocus 
+  updateMonthlyFocus,
+  getFamilyMembers,
+  addFamilyMember,
+  updateFamilyMember,
+  deleteFamilyMember
 } from './supabaseClient';
 import CategoryManagerModal from './components/CategoryManagerModal';
 import MemberManagerModal from './components/MemberManagerModal';
@@ -106,6 +110,22 @@ export default function App() {
       getMonthlyConfig('2026-10').then((config) => {
         if (config) {
           setMonthlyConfig(prev => ({ ...prev, ...config }));
+        }
+      });
+
+      // Đồng bộ danh sách thành viên gia đình từ Supabase
+      getFamilyMembers().then((cloudMembers) => {
+        if (cloudMembers && cloudMembers.length > 0) {
+          const formatted = cloudMembers.map((m) => ({
+            id: m.id,
+            username: m.username,
+            name: m.name,
+            pin: m.pin_hash,
+            role: m.role || 'Thành viên',
+            vault: m.vault || `personal_${m.username}`,
+            color: m.color || 'emerald'
+          }));
+          setMembers(formatted);
         }
       });
     }
@@ -217,12 +237,20 @@ export default function App() {
   };
 
   // Quản lý thành viên gia đình
-  const handleAddMember = (newMember) => {
+  const handleAddMember = async (newMember) => {
     setMembers((prev) => [...prev, newMember]);
     showToast(`Đã thêm thành viên: ${newMember.name}`);
+
+    if (isSupabaseConfigured) {
+      try {
+        await addFamilyMember(newMember);
+      } catch (err) {
+        console.error('Lỗi lưu thành viên lên Supabase:', err);
+      }
+    }
   };
 
-  const handleUpdateMember = (id, updates) => {
+  const handleUpdateMember = async (id, updates) => {
     setMembers((prev) =>
       prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
     );
@@ -234,12 +262,28 @@ export default function App() {
       }
     }
     showToast('Đã cập nhật thông tin thành viên');
+
+    if (isSupabaseConfigured) {
+      try {
+        await updateFamilyMember(id, updates);
+      } catch (err) {
+        console.error('Lỗi cập nhật thành viên lên Supabase:', err);
+      }
+    }
   };
 
-  const handleDeleteMember = (id) => {
+  const handleDeleteMember = async (id) => {
     const memberToDelete = members.find((m) => m.id === id);
     setMembers((prev) => prev.filter((m) => m.id !== id));
     showToast(`Đã xóa thành viên: ${memberToDelete?.name || ''}`);
+
+    if (isSupabaseConfigured) {
+      try {
+        await deleteFamilyMember(id);
+      } catch (err) {
+        console.error('Lỗi xóa thành viên trên Supabase:', err);
+      }
+    }
   };
 
   // Thêm giao dịch

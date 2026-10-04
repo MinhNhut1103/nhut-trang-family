@@ -43,10 +43,26 @@ create table if not exists public.savings_goals (
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. BẬT ROW LEVEL SECURITY (RLS) & PUBLIC ACCESS CHO APP GIA ĐÌNH
+-- 4. BẢNG FAMILY_MEMBERS (Quản lý thành viên & Thông tin đăng nhập an toàn)
+create table if not exists public.family_members (
+    id text primary key,
+    username text unique not null,
+    name text not null,
+    pin_hash text not null, -- Mã PIN/mật khẩu được bảo mật
+    role text default 'Thành viên',
+    vault text default 'shared',
+    color text default 'emerald',
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index if not exists idx_family_members_username on public.family_members (username);
+
+-- 5. BẬT ROW LEVEL SECURITY (RLS) & PUBLIC ACCESS CHO APP GIA ĐÌNH
 alter table public.transactions enable row level security;
 alter table public.monthly_config enable row level security;
 alter table public.savings_goals enable row level security;
+alter table public.family_members enable row level security;
 
 -- Policy cho phép đọc/ghi qua anon key (dành cho gia đình dùng chung mã kết nối)
 create policy "Allow all operations for transactions" on public.transactions
@@ -58,12 +74,22 @@ create policy "Allow all operations for monthly_config" on public.monthly_config
 create policy "Allow all operations for savings_goals" on public.savings_goals
     for all using (true) with check (true);
 
+create policy "Allow all operations for family_members" on public.family_members
+    for all using (true) with check (true);
+
 -- Bật Realtime
 alter publication supabase_realtime add table public.transactions;
 alter publication supabase_realtime add table public.monthly_config;
 alter publication supabase_realtime add table public.savings_goals;
+alter publication supabase_realtime add table public.family_members;
 
--- 5. CHÈN DỮ LIỆU MẪU CHUẨN TỪ BẢNG EXCEL CỦA BẠN (SEEDS ĐÃ KÈM THỜI GIAN)
+-- 6. CHÈN DỮ LIỆU MẪU CHUẨN TỪ BẢNG EXCEL CỦA BẠN (SEEDS ĐÃ KÈM THỜI GIAN)
+insert into public.family_members (id, username, name, pin_hash, role, vault, color)
+values 
+    ('m-1', 'nhut', 'Nhựt', '1103', 'Chủ gia đình', 'personal_nhut', 'emerald'),
+    ('m-2', 'trang', 'Trang', '1234', 'Đồng quản lý', 'personal_trang', 'pink')
+on conflict (id) do nothing;
+
 insert into public.monthly_config (id, banner_focus, han_muc_chi)
 values ('2026-10', '', 30000000)
 on conflict (id) do update set banner_focus = excluded.banner_focus;

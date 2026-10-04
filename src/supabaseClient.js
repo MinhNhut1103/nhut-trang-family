@@ -97,3 +97,82 @@ export async function updateMonthlyFocus(monthId = '2026-10', focusText) {
   if (error) throw error;
   return data[0];
 }
+
+// ==========================================
+// 4. QUẢN LÝ THÀNH VIÊN & BẢO MẬT ĐĂNG NHẬP
+// ==========================================
+
+export async function getFamilyMembers() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('*')
+    .order('created_at', { ascending: true });
+  
+  if (error) {
+    console.error('Error fetching family_members from Supabase:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function addFamilyMember(member) {
+  if (!supabase) return null;
+  const payload = {
+    id: member.id,
+    username: member.username,
+    name: member.name,
+    pin_hash: member.pin || '1234',
+    role: member.role || 'Thành viên',
+    vault: member.vault || `personal_${member.username}`,
+    color: member.color || 'emerald',
+    updated_at: new Date().toISOString()
+  };
+
+  const { data, error } = await supabase
+    .from('family_members')
+    .insert([payload])
+    .select();
+  
+  if (error) {
+    console.error('Error adding family member to Supabase:', error);
+    throw error;
+  }
+  return data[0];
+}
+
+export async function updateFamilyMember(id, updates) {
+  if (!supabase) return null;
+  const payload = { ...updates, updated_at: new Date().toISOString() };
+  if (payload.pin) {
+    payload.pin_hash = payload.pin;
+    delete payload.pin;
+  }
+
+  const { data, error } = await supabase
+    .from('family_members')
+    .update(payload)
+    .eq('id', id)
+    .select();
+  
+  if (error) {
+    console.error('Error updating family member in Supabase:', error);
+    throw error;
+  }
+  return data[0];
+}
+
+export async function deleteFamilyMember(id) {
+  if (!supabase) return null;
+  const { error } = await supabase
+    .from('family_members')
+    .delete()
+    .eq('id', id);
+  
+  if (error) {
+    console.error('Error deleting family member from Supabase:', error);
+    throw error;
+  }
+  return true;
+}
+
