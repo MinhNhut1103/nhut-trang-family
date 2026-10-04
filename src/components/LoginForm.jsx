@@ -41,8 +41,8 @@ export default function LoginForm({ members, onLoginSuccess }) {
       return;
     }
 
-    // Kiểm tra mật khẩu hoặc PIN
-    if (member.pin && member.pin !== trimmedPass && trimmedPass !== '1234') {
+    // Kiểm tra mật khẩu hoặc PIN chính xác tuyệt đối
+    if (member.pin && member.pin !== trimmedPass) {
       setErrorMsg('Mật khẩu / Mã PIN không chính xác, vui lòng thử lại');
       return;
     }
@@ -191,11 +191,11 @@ export default function LoginForm({ members, onLoginSuccess }) {
 
           </form>
 
-          {/* Ghi chú gợi ý mã mặc định */}
+          {/* Ghi chú bảo mật */}
           <div className="mt-5 pt-4 border-t border-slate-100 text-center">
-            <p className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
-              <ShieldCheck size={14} className="text-emerald-600" />
-              <span>Mật khẩu mẫu: <strong>1103</strong> hoặc <strong>1234</strong></span>
+            <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
+              <ShieldCheck size={15} className="text-emerald-600" weight="fill" />
+              <span>Hệ thống nội bộ gia đình • Mã hóa & bảo mật trên Database</span>
             </p>
           </div>
 
