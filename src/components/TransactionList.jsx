@@ -7,19 +7,23 @@ import {
   MagnifyingGlass,
   SlidersHorizontal,
   PencilSimple,
-  Clock
+  Clock,
+  Plus
 } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList } from '../data/initialData';
+import TransactionModal from './TransactionModal';
 
 export default function TransactionList({ 
   transactions = [], 
+  onAddTransaction,
   onDeleteTransaction, 
   onUpdateTransaction,
   categories = categoriesList,
   macroTypes = macroTypesList,
+  members = [],
   onOpenCategoryManager,
   privacyMode, 
-  activeVault,
+  activeVault = 'all',
   activeUser
 }) {
   const [filterCategory, setFilterCategory] = useState('all');
@@ -27,19 +31,50 @@ export default function TransactionList({
   const [searchKeyword, setSearchKeyword] = useState('');
   const [mobileView, setMobileView] = useState('table'); // 'table' | 'cards'
 
+  // Modal Thêm / Sửa thu chi
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState(null);
+
   const formatMoney = (val) => {
     if (!val || val === 0) return '';
     if (privacyMode) return '•••••• đ';
     return new Intl.NumberFormat('vi-VN').format(val);
   };
 
-  // Lọc dữ liệu
-  const filteredList = transactions.filter((tx) => {
-    // Lọc theo không gian
-    if (activeVault === 'shared' && tx.vault !== 'shared') return false;
-    if (activeVault === 'personal_nhut' && tx.vault !== 'personal_nhut') return false;
-    if (activeVault === 'personal_trang' && tx.vault !== 'personal_trang') return false;
+  // Mở modal thêm mới
+  const handleOpenAdd = () => {
+    setEditingTx(null);
+    setIsModalOpen(true);
+  };
 
+  // Mở modal sửa
+  const handleOpenEdit = (tx) => {
+    setEditingTx(tx);
+    setIsModalOpen(true);
+  };
+
+  // Lưu từ modal (thêm hoặc sửa)
+  const handleSaveModal = (txData) => {
+    if (editingTx) {
+      onUpdateTransaction(editingTx.id, txData);
+    } else if (onAddTransaction) {
+      onAddTransaction(txData);
+    }
+  };
+
+  // Xóa có xác nhận an toàn
+  const handleDeleteWithConfirm = (tx) => {
+    const amountStr = (tx.thu || 0) > 0 
+      ? `+${new Intl.NumberFormat('vi-VN').format(tx.thu)} đ`
+      : `-${new Intl.NumberFormat('vi-VN').format(tx.chi)} đ`;
+
+    if (window.confirm(`Bạn có chắc chắn muốn xóa "${tx.noi_dung}" (${amountStr}) khỏi sổ không?`)) {
+      onDeleteTransaction(tx.id);
+    }
+  };
+
+  // Lọc dữ liệu (đã bỏ bộ lọc ví để hiển thị thống nhất toàn bộ thu chi gia đình)
+  const filteredList = transactions.filter((tx) => {
     // Lọc theo phân loại
     if (filterCategory !== 'all' && tx.phan_loai !== filterCategory) return false;
 
@@ -108,7 +143,7 @@ export default function TransactionList({
     <section className="w-full max-w-5xl mx-auto px-4 md:px-8 py-3 pb-12">
       <div className="card-soft overflow-hidden">
         
-        {/* Thanh công cụ lọc phía trên bảng */}
+        {/* Thanh công cụ tìm kiếm & Thao tác Thêm / Sửa / Xuất file */}
         <div className="p-3.5 md:p-4 bg-slate-50/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5 text-xs">
           
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
@@ -148,17 +183,27 @@ export default function TransactionList({
             </select>
           </div>
 
-          {/* Nút bấm chuyển chế độ xem & Quản lý danh mục & Xuất file */}
+          {/* Cụm nút Thêm mới & Quản lý danh mục & Chuyển chế độ xem & Xuất file */}
           <div className="flex items-center gap-2">
             
+            {/* NÚT THÊM THU CHI MỚI */}
+            <button
+              onClick={handleOpenAdd}
+              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors tactile-btn"
+              title="Thêm khoản thu chi mới vào sổ"
+            >
+              <Plus size={14} weight="bold" />
+              <span>Thêm thu chi</span>
+            </button>
+
             {/* Nút quản lý phân loại & loại */}
             <button
               onClick={onOpenCategoryManager}
-              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-lg text-slate-700 tactile-btn flex items-center gap-1.5 transition-colors font-medium shadow-2xs"
+              className="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 tactile-btn flex items-center gap-1.5 transition-colors font-medium shadow-2xs"
               title="Thêm, sửa, xóa phân loại và loại"
             >
               <SlidersHorizontal size={14} />
-              <span>Sửa danh mục</span>
+              <span className="hidden sm:inline">Sửa danh mục</span>
             </button>
 
             <button
@@ -166,7 +211,7 @@ export default function TransactionList({
               className="md:hidden px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 tactile-btn flex items-center gap-1"
             >
               {mobileView === 'table' ? <ListBullets size={14} /> : <Table size={14} />}
-              <span>{mobileView === 'table' ? 'Dạng thẻ' : 'Dạng bảng'}</span>
+              <span>{mobileView === 'table' ? 'Thẻ' : 'Bảng'}</span>
             </button>
 
             <button
@@ -175,18 +220,18 @@ export default function TransactionList({
               title="Xuất file CSV/Excel"
             >
               <DownloadSimple size={14} />
-              <span>Xuất Excel</span>
+              <span className="hidden sm:inline">Xuất Excel</span>
             </button>
           </div>
 
         </div>
 
-        {/* 1. DẠNG BẢNG CHUẨN GOOGLE SHEETS (ĐÃ BỎ DÒNG GIẢM MUA ĐỒ) */}
+        {/* 1. DẠNG BẢNG CHUẨN GOOGLE SHEETS */}
         {mobileView === 'table' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               
-              {/* Tiêu đề bảng màu xanh lá đậm như hình */}
+              {/* Tiêu đề bảng */}
               <thead>
                 <tr className="bg-[#1B4D3E] text-white border-b border-emerald-900 font-semibold tracking-wide">
                   <th className="py-2.5 px-3.5 w-28">Ngày & Giờ</th>
@@ -195,7 +240,7 @@ export default function TransactionList({
                   <th className="py-2.5 px-3.5 text-right w-28"># Chi</th>
                   <th className="py-2.5 px-3.5 text-center w-32">Phân loại</th>
                   <th className="py-2.5 px-3.5 text-center w-32">Loại</th>
-                  <th className="py-2.5 px-2 text-right w-12"></th>
+                  <th className="py-2.5 px-3 text-center w-24">Thao tác</th>
                 </tr>
               </thead>
 
@@ -203,7 +248,7 @@ export default function TransactionList({
                 {filteredList.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="py-12 text-center text-slate-400">
-                      Không có bản ghi nào trong không gian này.
+                      Không có bản ghi nào trong danh sách.
                     </td>
                   </tr>
                 ) : (
@@ -247,12 +292,12 @@ export default function TransactionList({
                           {hasChi ? formatMoney(tx.chi) : ''}
                         </td>
 
-                        {/* Phân loại Dropdown có hỗ trợ sửa/thêm */}
+                        {/* Phân loại Dropdown */}
                         <td className="py-2 px-2 text-center whitespace-nowrap">
                           <select
                             value={tx.phan_loai || (categories[0] || 'ăn uống')}
                             onChange={(e) => handleSelectCategory(tx.id, e.target.value)}
-                            className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/90 text-slate-800 text-[11px] font-medium border border-slate-300/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white cursor-pointer text-center appearance-none pr-5.5 transition-colors relative"
+                            className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/90 text-slate-800 text-[11px] font-medium border border-slate-300/80 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white cursor-pointer text-center appearance-none pr-5.5 transition-colors relative"
                             style={{
                               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E")`,
                               backgroundRepeat: 'no-repeat',
@@ -267,12 +312,12 @@ export default function TransactionList({
                           </select>
                         </td>
 
-                        {/* Loại Dropdown có hỗ trợ sửa/thêm */}
+                        {/* Loại Dropdown */}
                         <td className="py-2 px-2 text-center whitespace-nowrap">
                           <select
                             value={tx.loai || (macroTypes[0] || 'thiết yếu')}
                             onChange={(e) => handleSelectMacroType(tx.id, e.target.value)}
-                            className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/90 text-slate-800 text-[11px] font-medium border border-slate-300/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white cursor-pointer text-center appearance-none pr-5.5 transition-colors relative"
+                            className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/90 text-slate-800 text-[11px] font-medium border border-slate-300/80 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white cursor-pointer text-center appearance-none pr-5.5 transition-colors relative"
                             style={{
                               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E")`,
                               backgroundRepeat: 'no-repeat',
@@ -287,15 +332,24 @@ export default function TransactionList({
                           </select>
                         </td>
 
-                        {/* Thao tác xóa */}
-                        <td className="py-2.5 px-2 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => onDeleteTransaction(tx.id)}
-                            className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-600 p-1 rounded-md transition-all"
-                            title="Xóa dòng này"
-                          >
-                            <Trash size={14} />
-                          </button>
+                        {/* THAO TÁC: SỬA & XÓA */}
+                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleOpenEdit(tx)}
+                              className="text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 p-1.5 rounded-lg transition-colors"
+                              title="Sửa khoản thu chi này"
+                            >
+                              <PencilSimple size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteWithConfirm(tx)}
+                              className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"
+                              title="Xóa khoản thu chi này"
+                            >
+                              <Trash size={15} />
+                            </button>
+                          </div>
                         </td>
 
                       </tr>
@@ -325,7 +379,7 @@ export default function TransactionList({
             </table>
           </div>
         ) : (
-          /* 2. DẠNG THẺ GỌN CHO ĐIỆN THOẠI */
+          /* 2. DẠNG THẺ GỌN CHO ĐIỆN THOẠI CÓ ĐỦ SỬA & XÓA */
           <div className="p-3 divide-y divide-slate-100">
             {filteredList.map((tx) => (
               <div key={tx.id} className="py-2.5 flex items-center justify-between gap-2">
@@ -333,7 +387,7 @@ export default function TransactionList({
                   <div className="text-xs font-semibold text-slate-900 truncate">
                     {tx.noi_dung}
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1 flex-wrap">
                     <span className="tabular-nums font-medium">{tx.ngay}</span>
                     <span className="text-slate-300">•</span>
                     <span className="tabular-nums text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5">
@@ -343,41 +397,44 @@ export default function TransactionList({
                     <span className="text-slate-300">•</span>
                     
                     {/* Phân loại trên mobile */}
-                    <select
-                      value={tx.phan_loai || (categories[0] || 'ăn uống')}
-                      onChange={(e) => handleSelectCategory(tx.id, e.target.value)}
-                      className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200 focus:outline-none"
-                    >
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                      <option value="__manage__">✏️ Sửa danh mục...</option>
-                    </select>
-
-                    {/* Loại trên mobile */}
-                    <select
-                      value={tx.loai || (macroTypes[0] || 'thiết yếu')}
-                      onChange={(e) => handleSelectMacroType(tx.id, e.target.value)}
-                      className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200 focus:outline-none"
-                    >
-                      {macroTypes.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                      <option value="__manage__">✏️ Sửa danh mục...</option>
-                    </select>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">
+                      {tx.phan_loai}
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">
+                      {tx.loai}
+                    </span>
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
-                  {tx.thu > 0 ? (
-                    <div className="text-xs font-bold text-emerald-700 tabular-nums">
-                      +{new Intl.NumberFormat('vi-VN').format(tx.thu)} đ
-                    </div>
-                  ) : (
-                    <div className="text-xs font-bold text-slate-800 tabular-nums">
-                      -{new Intl.NumberFormat('vi-VN').format(tx.chi)} đ
-                    </div>
-                  )}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-right">
+                    {tx.thu > 0 ? (
+                      <div className="text-xs font-bold text-emerald-700 tabular-nums">
+                        +{new Intl.NumberFormat('vi-VN').format(tx.thu)} đ
+                      </div>
+                    ) : (
+                      <div className="text-xs font-bold text-slate-800 tabular-nums">
+                        -{new Intl.NumberFormat('vi-VN').format(tx.chi)} đ
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-0.5 pl-1 border-l border-slate-100">
+                    <button
+                      onClick={() => handleOpenEdit(tx)}
+                      className="text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 p-1.5 rounded-lg transition-colors"
+                      title="Sửa"
+                    >
+                      <PencilSimple size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteWithConfirm(tx)}
+                      className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"
+                      title="Xóa"
+                    >
+                      <Trash size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -385,6 +442,19 @@ export default function TransactionList({
         )}
 
       </div>
+
+      {/* POPUP THÊM & SỬA THU CHI */}
+      <TransactionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        transactionToEdit={editingTx}
+        onSave={handleSaveModal}
+        categories={categories}
+        macroTypes={macroTypes}
+        members={members}
+        activeUser={activeUser}
+      />
+
     </section>
   );
 }

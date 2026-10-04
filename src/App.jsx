@@ -313,15 +313,18 @@ export default function App() {
     }
   };
 
-  // Cập nhật giao dịch (như đổi Phân loại, Loại trực tiếp trong bảng)
-  const handleUpdateTransaction = async (id, field, value) => {
+  // Cập nhật giao dịch (như đổi Phân loại, Loại hoặc chỉnh sửa toàn bộ trong modal)
+  const handleUpdateTransaction = async (id, updatesOrField, value) => {
+    const updates = typeof updatesOrField === 'object' ? updatesOrField : { [updatesOrField]: value };
+
     setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
     );
+    showToast('Đã cập nhật khoản thu chi');
 
     if (isSupabaseConfigured) {
       try {
-        await updateTransaction(id, { [field]: value });
+        await updateTransaction(id, updates);
       } catch (err) {
         console.error('Lỗi cập nhật Supabase:', err);
       }
@@ -425,6 +428,7 @@ export default function App() {
         {/* Bảng sổ kế toán chuẩn Google Sheets */}
         <TransactionList
           transactions={transactions}
+          onAddTransaction={handleAddTransaction}
           onDeleteTransaction={handleDeleteTransaction}
           onUpdateTransaction={handleUpdateTransaction}
           privacyMode={privacyMode}
@@ -433,6 +437,7 @@ export default function App() {
           monthlyConfig={monthlyConfig}
           categories={categories}
           macroTypes={macroTypes}
+          members={members}
           onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
         />
       </main>
