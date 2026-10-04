@@ -7,6 +7,8 @@ import {
   initialTransactions, 
   initialProfile, 
   initialMonthlyConfig,
+  initialSeptemberConfig,
+  septemberTransactions,
   categoriesList,
   macroTypesList,
   getRandomTime,
@@ -47,28 +49,40 @@ export default function App() {
     return localStorage.getItem('nt_privacy_mode') === 'true';
   });
 
-  // Quản lý tháng đang xem & ghi chú riêng cho từng tháng
+  // Quản lý tháng đang xem & ghi chú riêng cho từng tháng (ưu tiên tháng 9 vừa nạp)
   const [currentMonth, setCurrentMonth] = useState(() => {
-    return localStorage.getItem('nt_current_month') || '2026-10';
+    return localStorage.getItem('nt_current_month') || '2026-09';
   });
 
   const [monthlyConfigs, setMonthlyConfigs] = useState(() => {
     const saved = localStorage.getItem('nt_monthly_configs');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing nt_monthly_configs:', e);
-      }
-    }
-    return {
+    const defaults = {
       '2026-10': {
         id: '2026-10',
         banner_focus: initialMonthlyConfig.banner_focus || 'Tối ưu chi tiêu & tiết kiệm',
         han_muc_chi: initialMonthlyConfig.han_muc_chi || 30000000,
         ghi_chu: 'Tháng 10/2026: Ưu tiên tiết kiệm chuẩn bị cho các kế hoạch cuối năm, rà soát hóa đơn điện nước định kỳ.'
+      },
+      '2026-09': {
+        id: '2026-09',
+        banner_focus: initialSeptemberConfig.banner_focus,
+        han_muc_chi: initialSeptemberConfig.han_muc_chi,
+        ghi_chu: initialSeptemberConfig.ghi_chu
       }
     };
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          ...defaults,
+          ...parsed,
+          '2026-09': parsed['2026-09'] || defaults['2026-09']
+        };
+      } catch (e) {
+        console.error('Error parsing nt_monthly_configs:', e);
+      }
+    }
+    return defaults;
   });
 
   const [isMonthManagerOpen, setIsMonthManagerOpen] = useState(false);
@@ -78,6 +92,10 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        const hasSep = parsed.some((t) => (t.ngay || '').startsWith('2026-09'));
+        if (!hasSep) {
+          return [...septemberTransactions, ...parsed];
+        }
         return parsed.map((t) => ({
           ...t,
           gio: t.gio || getRandomTime()
@@ -248,6 +266,7 @@ export default function App() {
     const set = new Set(Object.keys(monthlyConfigs));
     set.add(currentMonth);
     set.add('2026-10');
+    set.add('2026-09');
     transactions.forEach((t) => {
       if (t.ngay && t.ngay.length >= 7) {
         set.add(t.ngay.slice(0, 7));
