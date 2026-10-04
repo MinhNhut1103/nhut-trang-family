@@ -115,7 +115,7 @@ export default function BudgetPulse({
           <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-0.5 sm:mb-1">
             Tổng Chi
           </span>
-          <div className="text-xs sm:text-base md:text-xl font-bold text-slate-800 tabular-nums">
+          <div className="text-xs sm:text-base md:text-xl font-bold text-rose-600 tabular-nums">
             -{formatMoney(totalChi)}
           </div>
         </div>

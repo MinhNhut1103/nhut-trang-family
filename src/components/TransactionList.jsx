@@ -53,9 +53,9 @@ export default function TransactionList({
   const [editingTx, setEditingTx] = useState(null);
 
   const formatMoney = (val) => {
-    if (!val || val === 0) return '';
+    if (!val || val === 0) return '0đ';
     if (privacyMode) return '•••••• đ';
-    return new Intl.NumberFormat('vi-VN').format(val);
+    return new Intl.NumberFormat('vi-VN').format(val) + 'đ';
   };
 
   // Mở modal thêm mới
@@ -523,13 +523,13 @@ export default function TransactionList({
                         </td>
 
                         {/* Thu */}
-                        <td className="py-2.5 px-3.5 text-right tabular-nums font-semibold text-emerald-700 whitespace-nowrap">
-                          {hasThu ? formatMoney(tx.thu) : ''}
+                        <td className="py-2.5 px-3.5 text-right tabular-nums font-bold text-emerald-700 whitespace-nowrap">
+                          {hasThu ? (privacyMode ? '•••••• đ' : `+${new Intl.NumberFormat('vi-VN').format(tx.thu)}đ`) : ''}
                         </td>
 
                         {/* Chi */}
-                        <td className="py-2.5 px-3.5 text-right tabular-nums font-semibold text-slate-800 whitespace-nowrap">
-                          {hasChi ? formatMoney(tx.chi) : ''}
+                        <td className="py-2.5 px-3.5 text-right tabular-nums font-bold text-rose-600 whitespace-nowrap">
+                          {hasChi ? (privacyMode ? '•••••• đ' : `-${new Intl.NumberFormat('vi-VN').format(tx.chi)}đ`) : ''}
                         </td>
 
                         {/* Phân loại Dropdown */}
@@ -605,10 +605,10 @@ export default function TransactionList({
                     Tổng cộng:
                   </td>
                   <td className="py-3 px-3.5 text-right tabular-nums text-emerald-700 font-bold">
-                    {formatMoney(totalThu)}
+                    +{formatMoney(totalThu)}
                   </td>
-                  <td className="py-3 px-3.5 text-right tabular-nums text-slate-900 font-bold">
-                    {formatMoney(totalChi)}
+                  <td className="py-3 px-3.5 text-right tabular-nums text-rose-600 font-bold">
+                    -{formatMoney(totalChi)}
                   </td>
                   <td colSpan="3" className="py-3 px-3.5 text-right text-xs text-slate-500 font-medium">
                     Còn dư: <strong className="text-emerald-800 tabular-nums">{new Intl.NumberFormat('vi-VN').format(totalThu - totalChi)} đ</strong>
@@ -645,7 +645,7 @@ export default function TransactionList({
                       {/* Icon & Nội dung */}
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                          isThu ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                          isThu ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'
                         }`}>
                           {isThu ? <ArrowDown size={14} weight="bold" /> : <ArrowUp size={14} weight="bold" />}
                         </div>
@@ -683,12 +683,12 @@ export default function TransactionList({
                       <div className="flex items-center gap-1.5 shrink-0">
                         <div className="text-right">
                           {isThu ? (
-                            <div className="text-xs font-bold text-emerald-700 tabular-nums">
-                              +{new Intl.NumberFormat('vi-VN').format(tx.thu)} đ
+                            <div className="text-xs sm:text-sm font-bold text-emerald-700 tabular-nums">
+                              {privacyMode ? '•••••• đ' : `+${new Intl.NumberFormat('vi-VN').format(tx.thu)}đ`}
                             </div>
                           ) : (
-                            <div className="text-xs font-bold text-slate-800 tabular-nums">
-                              -{new Intl.NumberFormat('vi-VN').format(tx.chi)} đ
+                            <div className="text-xs sm:text-sm font-bold text-rose-600 tabular-nums">
+                              {privacyMode ? '•••••• đ' : `-${new Intl.NumberFormat('vi-VN').format(tx.chi)}đ`}
                             </div>
                           )}
                         </div>
@@ -724,7 +724,7 @@ export default function TransactionList({
               </div>
               <div className="flex justify-between items-center text-slate-500">
                 <span>Tổng Chi:</span>
-                <span className="font-bold text-slate-900 tabular-nums">-{formatMoney(totalChi)}</span>
+                <span className="font-bold text-rose-600 tabular-nums">-{formatMoney(totalChi)}</span>
               </div>
               <div className="flex justify-between items-center pt-1.5 border-t border-slate-200/80 font-bold">
                 <span className="text-slate-800">Còn dư:</span>
