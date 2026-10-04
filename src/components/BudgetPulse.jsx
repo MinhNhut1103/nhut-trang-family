@@ -32,34 +32,34 @@ export default function BudgetPulse({
       </div>
 
       {/* 2. TÓM TẮT 3 CON SỐ: TỔNG THU - TỔNG CHI - CÒN LẠI */}
-      <div className="grid grid-cols-3 gap-3 mb-2">
+      <div className="grid grid-cols-3 gap-2 md:gap-3 mb-2">
         
         {/* Thu */}
-        <div className="card-soft p-3.5 md:p-4 text-center">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+        <div className="card-soft p-2.5 sm:p-3.5 md:p-4 text-center">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-0.5 sm:mb-1">
             Tổng Thu
           </span>
-          <div className="text-base md:text-xl font-bold text-emerald-700 tabular-nums">
+          <div className="text-xs sm:text-base md:text-xl font-bold text-emerald-700 tabular-nums">
             +{formatMoney(totalThu)}
           </div>
         </div>
 
         {/* Chi */}
-        <div className="card-soft p-3.5 md:p-4 text-center">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+        <div className="card-soft p-2.5 sm:p-3.5 md:p-4 text-center">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-0.5 sm:mb-1">
             Tổng Chi
           </span>
-          <div className="text-base md:text-xl font-bold text-slate-800 tabular-nums">
+          <div className="text-xs sm:text-base md:text-xl font-bold text-slate-800 tabular-nums">
             -{formatMoney(totalChi)}
           </div>
         </div>
 
         {/* Còn lại */}
-        <div className="card-soft p-3.5 md:p-4 text-center bg-slate-50/50">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+        <div className="card-soft p-2.5 sm:p-3.5 md:p-4 text-center bg-slate-50/50">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-0.5 sm:mb-1">
             Chênh Lệch
           </span>
-          <div className={`text-base md:text-xl font-bold tabular-nums ${
+          <div className={`text-xs sm:text-base md:text-xl font-bold tabular-nums ${
             netBalance >= 0 ? 'text-emerald-700' : 'text-rose-600'
           }`}>
             {netBalance >= 0 ? '+' : ''}{formatMoney(netBalance)}

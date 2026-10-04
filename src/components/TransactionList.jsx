@@ -8,7 +8,9 @@ import {
   SlidersHorizontal,
   PencilSimple,
   Clock,
-  Plus
+  Plus,
+  ArrowDown,
+  ArrowUp
 } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList } from '../data/initialData';
 import TransactionModal from './TransactionModal';
@@ -29,7 +31,14 @@ export default function TransactionList({
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [mobileView, setMobileView] = useState('table'); // 'table' | 'cards'
+  
+  // Trên điện thoại, ưu tiên dạng thẻ (cards) cực kỳ tiện thao tác cảm ứng
+  const [mobileView, setMobileView] = useState(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'cards';
+    }
+    return 'table';
+  });
 
   // Modal Thêm / Sửa thu chi
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -379,65 +388,121 @@ export default function TransactionList({
             </table>
           </div>
         ) : (
-          /* 2. DẠNG THẺ GỌN CHO ĐIỆN THOẠI CÓ ĐỦ SỬA & XÓA */
-          <div className="p-3 divide-y divide-slate-100">
-            {filteredList.map((tx) => (
-              <div key={tx.id} className="py-2.5 flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-semibold text-slate-900 truncate">
-                    {tx.noi_dung}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1 flex-wrap">
-                    <span className="tabular-nums font-medium">{tx.ngay}</span>
-                    <span className="text-slate-300">•</span>
-                    <span className="tabular-nums text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5">
-                      <Clock size={10} className="text-slate-400 shrink-0" />
-                      <span>{tx.gio || '08:00'}</span>
-                    </span>
-                    <span className="text-slate-300">•</span>
-                    
-                    {/* Phân loại trên mobile */}
-                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">
-                      {tx.phan_loai}
-                    </span>
-                    <span className="text-slate-300">•</span>
-                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">
-                      {tx.loai}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-right">
-                    {tx.thu > 0 ? (
-                      <div className="text-xs font-bold text-emerald-700 tabular-nums">
-                        +{new Intl.NumberFormat('vi-VN').format(tx.thu)} đ
-                      </div>
-                    ) : (
-                      <div className="text-xs font-bold text-slate-800 tabular-nums">
-                        -{new Intl.NumberFormat('vi-VN').format(tx.chi)} đ
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-0.5 pl-1 border-l border-slate-100">
-                    <button
-                      onClick={() => handleOpenEdit(tx)}
-                      className="text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 p-1.5 rounded-lg transition-colors"
-                      title="Sửa"
-                    >
-                      <PencilSimple size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteWithConfirm(tx)}
-                      className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"
-                      title="Xóa"
-                    >
-                      <Trash size={14} />
-                    </button>
-                  </div>
-                </div>
+          /* 2. DẠNG THẺ GỌN CHO ĐIỆN THOẠI CỰC KỲ ĐẸP MẮT & TIỆN LỢI */
+          <div>
+            {filteredList.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 space-y-3">
+                <p className="text-xs">Không tìm thấy khoản thu chi nào phù hợp.</p>
+                <button
+                  type="button"
+                  onClick={handleOpenAdd}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+                >
+                  <Plus size={14} weight="bold" />
+                  <span>Thêm khoản đầu tiên</span>
+                </button>
               </div>
-            ))}
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {filteredList.map((tx) => {
+                  const isThu = (tx.thu || 0) > 0;
+                  return (
+                    <div 
+                      key={tx.id} 
+                      className="p-3 sm:p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/60 active:bg-slate-50 transition-colors"
+                    >
+                      {/* Icon & Nội dung */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                          isThu ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {isThu ? <ArrowDown size={14} weight="bold" /> : <ArrowUp size={14} weight="bold" />}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold text-slate-900 truncate">
+                            {tx.noi_dung}
+                          </div>
+                          
+                          {/* Dòng thông tin phụ: Ngày, Giờ, Phân loại, Người ghi */}
+                          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-500 mt-1 flex-wrap">
+                            <span className="tabular-nums font-medium text-slate-600">{tx.ngay}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="tabular-nums text-slate-500 flex items-center gap-0.5">
+                              <Clock size={10} className="text-slate-400" />
+                              <span>{tx.gio || '08:00'}</span>
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+                              {tx.phan_loai}
+                            </span>
+                            {tx.author && (
+                              <>
+                                <span className="text-slate-300">•</span>
+                                <span className="text-slate-400 font-medium">
+                                  {tx.author}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Số tiền & Nút Sửa / Xóa */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="text-right">
+                          {isThu ? (
+                            <div className="text-xs font-bold text-emerald-700 tabular-nums">
+                              +{new Intl.NumberFormat('vi-VN').format(tx.thu)} đ
+                            </div>
+                          ) : (
+                            <div className="text-xs font-bold text-slate-800 tabular-nums">
+                              -{new Intl.NumberFormat('vi-VN').format(tx.chi)} đ
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-0.5 pl-1.5 border-l border-slate-100">
+                          <button
+                            onClick={() => handleOpenEdit(tx)}
+                            className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-lg transition-colors"
+                            title="Sửa"
+                          >
+                            <PencilSimple size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteWithConfirm(tx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 rounded-lg transition-colors"
+                            title="Xóa"
+                          >
+                            <Trash size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Dòng tổng kết ở đáy dạng thẻ cho mobile */}
+            <div className="p-3.5 bg-slate-50 border-t border-slate-200 space-y-1.5 text-xs">
+              <div className="flex justify-between items-center text-slate-500">
+                <span>Tổng Thu:</span>
+                <span className="font-bold text-emerald-700 tabular-nums">+{formatMoney(totalThu)}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-500">
+                <span>Tổng Chi:</span>
+                <span className="font-bold text-slate-900 tabular-nums">-{formatMoney(totalChi)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-1.5 border-t border-slate-200/80 font-bold">
+                <span className="text-slate-800">Còn dư:</span>
+                <span className="text-emerald-800 tabular-nums text-sm font-extrabold">
+                  {new Intl.NumberFormat('vi-VN').format(totalThu - totalChi)} đ
+                </span>
+              </div>
+            </div>
+
           </div>
         )}
 
