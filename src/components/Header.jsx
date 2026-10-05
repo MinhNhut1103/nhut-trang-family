@@ -17,6 +17,7 @@ export default function Header({
   setPrivacyMode,
   members = [],
   currentUser,
+  currentMonth,
   onLogout,
   onOpenMemberManager
 }) {
@@ -53,7 +54,7 @@ export default function Header({
               </span>
             </div>
             <p className="text-[10px] text-slate-400 font-medium hidden md:block">
-              Quản lý tài chính tháng 10/2026
+              Quản lý tài chính {currentMonth && currentMonth.includes('-') ? `tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : 'gia đình'}
             </p>
           </div>
         </div>

@@ -52,9 +52,20 @@ export default function App() {
     return localStorage.getItem('nt_privacy_mode') === 'true';
   });
 
-  // Quản lý tháng đang xem & ghi chú riêng cho từng tháng (ưu tiên tháng 9 vừa nạp)
+  // Lấy tháng hiện tại thực tế theo lịch (YYYY-MM)
+  const getSystemCurrentMonth = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  };
+
+  // Quản lý tháng đang xem: Cứ F5 hoặc refresh tải lại trang sẽ luôn về tháng hiện tại
   const [currentMonth, setCurrentMonth] = useState(() => {
-    return localStorage.getItem('nt_current_month') || '2026-09';
+    try {
+      localStorage.removeItem('nt_current_month');
+    } catch (e) {}
+    return getSystemCurrentMonth();
   });
 
   const [monthlyConfigs, setMonthlyConfigs] = useState(() => {
@@ -225,10 +236,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('nt_privacy_mode', privacyMode);
   }, [privacyMode]);
-
-  useEffect(() => {
-    localStorage.setItem('nt_current_month', currentMonth);
-  }, [currentMonth]);
 
   useEffect(() => {
     localStorage.setItem('nt_monthly_configs', JSON.stringify(monthlyConfigs));
@@ -567,6 +574,7 @@ export default function App() {
         setPrivacyMode={setPrivacyMode}
         members={members}
         currentUser={currentUser}
+        currentMonth={currentMonth}
         onLogout={handleLogout}
         onOpenMemberManager={() => setIsMemberManagerOpen(true)}
       />
