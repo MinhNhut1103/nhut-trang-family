@@ -17,10 +17,10 @@ export default function DailyReminderCard({
   onOpenAddTransaction,
   onShowToast
 }) {
-  // Danh sách các ngày người dùng đã xác nhận "Không có chi tiêu" (lưu localStorage)
+  // Danh sách các ngày người dùng đã xác nhận "Không có chi tiêu" (lưu sessionStorage)
   const [zeroExpenseDays, setZeroExpenseDays] = useState(() => {
     try {
-      const saved = localStorage.getItem('nt_zero_expense_days');
+      const saved = sessionStorage.getItem('nt_zero_expense_days');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
@@ -78,7 +78,9 @@ export default function DailyReminderCard({
   const handleMarkZeroExpense = (dateISO) => {
     const updated = [...new Set([...zeroExpenseDays, dateISO])];
     setZeroExpenseDays(updated);
-    localStorage.setItem('nt_zero_expense_days', JSON.stringify(updated));
+    try {
+      sessionStorage.setItem('nt_zero_expense_days', JSON.stringify(updated));
+    } catch (e) {}
     if (onShowToast) {
       onShowToast(`Đã xác nhận ngày ${formatDateDisplay(dateISO)} không có chi tiêu`);
     }
@@ -89,7 +91,9 @@ export default function DailyReminderCard({
     const allMissedISOs = missingDays.map(d => d.iso);
     const updated = [...new Set([...zeroExpenseDays, ...allMissedISOs])];
     setZeroExpenseDays(updated);
-    localStorage.setItem('nt_zero_expense_days', JSON.stringify(updated));
+    try {
+      sessionStorage.setItem('nt_zero_expense_days', JSON.stringify(updated));
+    } catch (e) {}
     if (onShowToast) {
       onShowToast(`Đã đánh dấu xong ${allMissedISOs.length} ngày không phát sinh chi tiêu!`);
     }

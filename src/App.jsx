@@ -48,16 +48,14 @@ import { sanitizeMemberForStorage } from './utils/crypto';
 export default function App() {
   // 1. Trạng thái người dùng và không gian
   const [activeUser, setActiveUser] = useState(() => {
-    return localStorage.getItem('nt_active_user') || initialProfile.activeUser;
+    return initialProfile.activeUser;
   });
 
   const [activeVault, setActiveVault] = useState(() => {
-    return localStorage.getItem('nt_active_vault') || 'all'; // mặc định xem tất cả
+    return 'all'; // mặc định xem tất cả
   });
 
-  const [privacyMode, setPrivacyMode] = useState(() => {
-    return localStorage.getItem('nt_privacy_mode') === 'true';
-  });
+  const [privacyMode, setPrivacyMode] = useState(false);
 
   // Lấy tháng hiện tại thực tế theo lịch (YYYY-MM)
   const getSystemCurrentMonth = () => {
@@ -69,15 +67,11 @@ export default function App() {
 
   // Quản lý tháng đang xem: Cứ F5 hoặc refresh tải lại trang sẽ luôn về tháng hiện tại
   const [currentMonth, setCurrentMonth] = useState(() => {
-    try {
-      localStorage.removeItem('nt_current_month');
-    } catch (e) {}
     return getSystemCurrentMonth();
   });
 
   const [monthlyConfigs, setMonthlyConfigs] = useState(() => {
-    const saved = localStorage.getItem('nt_monthly_configs');
-    const defaults = {
+    return {
       '2026-10': {
         id: '2026-10',
         banner_focus: initialMonthlyConfig.banner_focus || 'Tối ưu chi tiêu & tiết kiệm',
@@ -97,83 +91,37 @@ export default function App() {
         ghi_chu: initialAugustConfig.ghi_chu
       }
     };
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return {
-          ...defaults,
-          ...parsed,
-          '2026-09': parsed['2026-09'] || defaults['2026-09'],
-          '2026-08': parsed['2026-08'] || defaults['2026-08']
-        };
-      } catch (e) {
-        console.error('Error parsing nt_monthly_configs:', e);
-      }
-    }
-    return defaults;
   });
 
   const [isMonthManagerOpen, setIsMonthManagerOpen] = useState(false);
 
   const [transactions, setTransactions] = useState(() => {
-    const saved = localStorage.getItem('nt_transactions');
-    if (saved) {
-      try {
-        let parsed = JSON.parse(saved);
-        const hasSep = parsed.some((t) => (t.ngay || '').startsWith('2026-09'));
-        if (!hasSep) {
-          parsed = [...septemberTransactions, ...parsed];
-        }
-        const hasAug = parsed.some((t) => (t.ngay || '').startsWith('2026-08'));
-        if (!hasAug) {
-          parsed = [...augustTransactions, ...parsed];
-        }
-        const withTime = parsed.map((t) => ({
-          ...t,
-          gio: t.gio || getRandomTime()
-        }));
-        return sortTransactionsByDateDesc(withTime);
-      } catch (e) {
-        return sortTransactionsByDateDesc(initialTransactions);
-      }
-    }
     return sortTransactionsByDateDesc(initialTransactions);
   });
 
   const [categories, setCategories] = useState(() => {
-    const saved = localStorage.getItem('nt_categories');
-    return saved ? JSON.parse(saved) : categoriesList;
+    return categoriesList;
   });
 
   const [macroTypes, setMacroTypes] = useState(() => {
-    const saved = localStorage.getItem('nt_macro_types');
-    return saved ? JSON.parse(saved) : macroTypesList;
+    return macroTypesList;
   });
 
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
 
   // Quản lý thành viên gia đình (Tự động xóa sạch mã PIN dạng plain text để bảo mật)
   const [members, setMembers] = useState(() => {
-    const saved = localStorage.getItem('nt_family_members');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.map((m) => sanitizeMemberForStorage(m));
-        }
-      } catch (e) {}
-    }
     return initialMembers.map((m) => sanitizeMemberForStorage(m));
   });
 
-  // Trạng thái tài khoản đang đăng nhập (chỉ có form đăng nhập)
+  // Trạng thái tài khoản đang đăng nhập (chỉ lưu trong sessionStorage của phiên duyệt web)
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('nt_auth_user') || sessionStorage.getItem('nt_auth_user');
-    if (saved) {
-      try {
+    try {
+      const saved = sessionStorage.getItem('nt_auth_user');
+      if (saved) {
         return sanitizeMemberForStorage(JSON.parse(saved));
-      } catch (e) {}
-    }
+      }
+    } catch (e) {}
     return null;
   });
 
@@ -332,58 +280,13 @@ export default function App() {
     };
   }, [monthlyConfigs]);
 
-  // 3. Tự động lưu LocalStorage trên máy
-  useEffect(() => {
-    localStorage.setItem('nt_active_user', activeUser);
-  }, [activeUser]);
-
-  useEffect(() => {
-    localStorage.setItem('nt_active_vault', activeVault);
-  }, [activeVault]);
-
-  useEffect(() => {
-    localStorage.setItem('nt_privacy_mode', privacyMode);
-  }, [privacyMode]);
-
-  useEffect(() => {
-    localStorage.setItem('nt_monthly_configs', JSON.stringify(monthlyConfigs));
-  }, [monthlyConfigs]);
-
-  useEffect(() => {
-    localStorage.setItem('nt_transactions', JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem('nt_categories', JSON.stringify(categories));
-  }, [categories]);
-
-  useEffect(() => {
-    localStorage.setItem('nt_macro_types', JSON.stringify(macroTypes));
-  }, [macroTypes]);
-
-  useEffect(() => {
-    const secureList = (members || []).map((m) => sanitizeMemberForStorage(m));
-    localStorage.setItem('nt_family_members', JSON.stringify(secureList));
-  }, [members]);
-
-  // Tự động dọn sạch toàn bộ dấu vết mã PIN hoặc hash cũ trong LocalStorage ngay khi tải trang
+  // 3. Bảo mật tuyệt đối: Luôn xóa sạch 100% localStorage của trình duyệt, không lưu trữ bất kỳ dữ liệu nào trên máy
   useEffect(() => {
     try {
-      const rawMem = localStorage.getItem('nt_family_members');
-      if (rawMem && (rawMem.includes('"pin"') || rawMem.includes('"pin_hash"'))) {
-        const parsed = JSON.parse(rawMem);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.map((m) => sanitizeMemberForStorage(m));
-          localStorage.setItem('nt_family_members', JSON.stringify(clean));
-        }
-      }
-      const rawUser = localStorage.getItem('nt_auth_user');
-      if (rawUser && (rawUser.includes('"pin"') || rawUser.includes('"pin_hash"'))) {
-        const parsedU = JSON.parse(rawUser);
-        const cleanU = sanitizeMemberForStorage(parsedU);
-        localStorage.setItem('nt_auth_user', JSON.stringify(cleanU));
-      }
-    } catch (e) {}
+      localStorage.clear();
+    } catch (e) {
+      console.warn('Không thể xóa localStorage:', e);
+    }
   }, []);
 
   // Thông báo nhẹ
@@ -538,21 +441,21 @@ export default function App() {
     showToast(`Đã xóa loại: ${type}`);
   };
 
-  // Đăng nhập & Đăng xuất
-  const handleLoginSuccess = (member, remember) => {
+  // Đăng nhập & Đăng xuất (chỉ dùng sessionStorage trong phiên, không ghi localStorage)
+  const handleLoginSuccess = (member) => {
     setCurrentUser(member);
     setActiveUser(member.username);
-    if (remember) {
-      localStorage.setItem('nt_auth_user', JSON.stringify(member));
-    } else {
+    try {
       sessionStorage.setItem('nt_auth_user', JSON.stringify(member));
-    }
+    } catch (e) {}
     showToast(`Chào mừng ${member.name} đã đăng nhập!`);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('nt_auth_user');
-    sessionStorage.removeItem('nt_auth_user');
+    try {
+      sessionStorage.removeItem('nt_auth_user');
+      localStorage.clear();
+    } catch (e) {}
     setCurrentUser(null);
     showToast('Đã đăng xuất khỏi tài khoản');
   };
@@ -578,9 +481,9 @@ export default function App() {
     if (currentUser?.id === id) {
       const updatedUser = { ...currentUser, ...updates };
       setCurrentUser(updatedUser);
-      if (localStorage.getItem('nt_auth_user')) {
-        localStorage.setItem('nt_auth_user', JSON.stringify(updatedUser));
-      }
+      try {
+        sessionStorage.setItem('nt_auth_user', JSON.stringify(updatedUser));
+      } catch (e) {}
     }
     showToast('Đã cập nhật thông tin thành viên');
 

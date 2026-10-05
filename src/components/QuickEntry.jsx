@@ -45,10 +45,14 @@ export default function QuickEntry({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [confirmingQuickItem, isAddingPreset]);
 
-  // Danh sách mục thêm nhanh do người dùng tự quản lý (mặc định lưu localStorage)
+  // Danh sách mục thêm nhanh do người dùng tự quản lý (lưu sessionStorage)
   const [quickList, setQuickList] = useState(() => {
-    const saved = localStorage.getItem('nt_quick_presets');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = sessionStorage.getItem('nt_quick_presets');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const handleAddPresetSubmit = (e) => {
@@ -70,7 +74,9 @@ export default function QuickEntry({
 
     const updated = [...quickList, newPreset];
     setQuickList(updated);
-    localStorage.setItem('nt_quick_presets', JSON.stringify(updated));
+    try {
+      sessionStorage.setItem('nt_quick_presets', JSON.stringify(updated));
+    } catch (e) {}
     if (onShowToast) onShowToast(`Đã lưu mục thường dùng: ${newPreset.label}`);
     setIsAddingPreset(false);
     setPresetForm({
@@ -88,7 +94,9 @@ export default function QuickEntry({
     if (window.confirm(`Bạn có chắc muốn xóa mục "${item.label}" khỏi danh sách thêm nhanh?`)) {
       const updated = quickList.filter((_, idx) => idx !== indexToDelete);
       setQuickList(updated);
-      localStorage.setItem('nt_quick_presets', JSON.stringify(updated));
+      try {
+        sessionStorage.setItem('nt_quick_presets', JSON.stringify(updated));
+      } catch (e) {}
       if (onShowToast) onShowToast(`Đã xóa mục: ${item.label}`);
     }
   };
