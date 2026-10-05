@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Calendar, Note, Plus, Target, CurrencyDollar, ArrowRight } from '@phosphor-icons/react';
+import { X, Check, Calendar, Note, Plus, Target, CurrencyDollar, ArrowRight, Money, CreditCard } from '@phosphor-icons/react';
 
 export default function MonthManagerModal({
   isOpen,
@@ -19,7 +19,9 @@ export default function MonthManagerModal({
   const [formData, setFormData] = useState({
     ghi_chu: '',
     banner_focus: '',
-    han_muc_chi: 30000000
+    han_muc_chi: 30000000,
+    tien_ngoai_vi: 0,
+    tien_trong_the: 0
   });
 
   // Hỗ trợ phím Esc để đóng modal
@@ -45,7 +47,9 @@ export default function MonthManagerModal({
     setFormData({
       ghi_chu: config.ghi_chu || '',
       banner_focus: config.banner_focus || '',
-      han_muc_chi: config.han_muc_chi || 30000000
+      han_muc_chi: config.han_muc_chi || 30000000,
+      tien_ngoai_vi: config.tien_ngoai_vi || 0,
+      tien_trong_the: config.tien_trong_the || 0
     });
   }, [activeTabMonth, monthlyConfigs]);
 
@@ -64,7 +68,9 @@ export default function MonthManagerModal({
       id: activeTabMonth,
       ghi_chu: formData.ghi_chu.trim(),
       banner_focus: formData.banner_focus.trim(),
-      han_muc_chi: Number(formData.han_muc_chi) || 30000000
+      han_muc_chi: Number(formData.han_muc_chi) || 30000000,
+      tien_ngoai_vi: Number(formData.tien_ngoai_vi) || 0,
+      tien_trong_the: Number(formData.tien_trong_the) || 0
     });
     onClose();
   };
@@ -241,6 +247,51 @@ export default function MonthManagerModal({
                 className="w-full py-2 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:outline-none focus:bg-white focus:border-emerald-500 tabular-nums"
               />
               <span className="absolute right-3 top-2 text-xs text-slate-400 font-semibold">đ</span>
+            </div>
+          </div>
+
+          {/* 4. Tiền ngoài ví & Tiền trong thẻ (Thủ công) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {/* Tiền ngoài ví */}
+            <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-200/80">
+              <label className="block text-amber-900 font-semibold mb-1 flex items-center gap-1.5">
+                <Money size={15} className="text-amber-700" weight="bold" />
+                <span>Tiền ngoài ví (Tiền mặt):</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={formData.tien_ngoai_vi || ''}
+                  onChange={(e) => setFormData({ ...formData, tien_ngoai_vi: e.target.value })}
+                  className="w-full py-2 pl-3 pr-8 bg-white border border-amber-300 rounded-xl text-amber-950 font-bold focus:outline-none focus:border-amber-500 tabular-nums text-xs"
+                />
+                <span className="absolute right-3 top-2 text-xs text-amber-600 font-semibold">đ</span>
+              </div>
+              <p className="text-[10px] text-amber-700/80 mt-1">
+                Tiền mặt có sẵn bên ngoài trong tháng.
+              </p>
+            </div>
+
+            {/* Tiền trong thẻ */}
+            <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-200/80">
+              <label className="block text-blue-900 font-semibold mb-1 flex items-center gap-1.5">
+                <CreditCard size={15} className="text-blue-700" weight="bold" />
+                <span>Tiền trong thẻ (Ngân hàng):</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={formData.tien_trong_the || ''}
+                  onChange={(e) => setFormData({ ...formData, tien_trong_the: e.target.value })}
+                  className="w-full py-2 pl-3 pr-8 bg-white border border-blue-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-blue-500 tabular-nums text-xs"
+                />
+                <span className="absolute right-3 top-2 text-xs text-blue-600 font-semibold">đ</span>
+              </div>
+              <p className="text-[10px] text-blue-700/80 mt-1">
+                Số dư tài khoản ngân hàng / thẻ ATM.
+              </p>
             </div>
           </div>
 

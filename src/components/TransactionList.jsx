@@ -31,7 +31,7 @@ import {
   ArrowDownRight,
   TrendUp
 } from '@phosphor-icons/react';
-import { categoriesList, macroTypesList, formatDateDisplay } from '../data/initialData';
+import { categoriesList, macroTypesList, formatDateDisplay, sortTransactionsByDateDesc, normalizeDateISO } from '../data/initialData';
 import TransactionModal from './TransactionModal';
 
 // Hàm lấy icon và màu sắc nhận diện trực quan theo phân loại
@@ -244,7 +244,7 @@ export default function TransactionList({
     return txNorm.day === filterNorm.day && txNorm.month === filterNorm.month;
   };
 
-  // Danh sách các ngày có dữ liệu phát sinh trong tháng đang chọn
+  // Danh sách các ngày có dữ liệu phát sinh trong tháng đang chọn (Sắp xếp từ MỚI TỚI CŨ)
   const availableDaysInScope = React.useMemo(() => {
     const dayMap = {};
     transactions.forEach((t) => {
@@ -268,46 +268,52 @@ export default function TransactionList({
       dayMap[norm.iso].count += 1;
     });
 
-    return Object.values(dayMap).sort((a, b) => a.iso.localeCompare(b.iso));
+    // Sắp xếp ngày từ mới nhất tới cũ nhất (Giảm dần)
+    return Object.values(dayMap).sort((a, b) => b.iso.localeCompare(a.iso));
   }, [transactions, filterMonth, currentMonth]);
 
-  // Lọc dữ liệu theo ngày, tháng, phân loại, loại, từ khóa
-  const filteredList = transactions.filter((tx) => {
-    // 1. Lọc theo ngày cụ thể (nếu người dùng chọn ngày)
-    if (filterDate) {
-      if (!isMatchingDate(tx.ngay, filterDate)) return false;
-    } else {
-      // Nếu không chọn ngày cụ thể thì lọc theo tháng
-      const norm = normalizeDate(tx.ngay);
-      if (filterMonth === 'current') {
-        if (currentMonth && norm && !norm.iso.startsWith(currentMonth)) return false;
-      } else if (filterMonth !== 'all') {
-        if (norm && !norm.iso.startsWith(filterMonth)) return false;
+  // Lọc dữ liệu theo ngày, tháng, phân loại, loại, từ khóa và LUÔN SẮP XẾP TỪ MỚI TỚI CŨ
+  const filteredList = React.useMemo(() => {
+    const list = transactions.filter((tx) => {
+      // 1. Lọc theo ngày cụ thể (nếu người dùng chọn ngày)
+      if (filterDate) {
+        if (!isMatchingDate(tx.ngay, filterDate)) return false;
+      } else {
+        // Nếu không chọn ngày cụ thể thì lọc theo tháng
+        const norm = normalizeDate(tx.ngay);
+        if (filterMonth === 'current') {
+          if (currentMonth && norm && !norm.iso.startsWith(currentMonth)) return false;
+        } else if (filterMonth !== 'all') {
+          if (norm && !norm.iso.startsWith(filterMonth)) return false;
+        }
       }
-    }
 
-    // 2. Lọc theo phân loại
-    if (filterCategory !== 'all' && tx.phan_loai !== filterCategory) return false;
+      // 2. Lọc theo phân loại
+      if (filterCategory !== 'all' && tx.phan_loai !== filterCategory) return false;
 
-    // 3. Lọc theo loại
-    if (filterType !== 'all' && tx.loai !== filterType) return false;
+      // 3. Lọc theo loại
+      if (filterType !== 'all' && tx.loai !== filterType) return false;
 
-    // 4. Tìm kiếm nội dung, người ghi, ghi chú, số tiền
-    if (searchKeyword.trim()) {
-      const q = searchKeyword.toLowerCase();
-      const matchTitle = (tx.noi_dung || '').toLowerCase().includes(q);
-      const matchNote = (tx.ghi_chu || '').toLowerCase().includes(q);
-      const matchAuthor = (tx.author || '').toLowerCase().includes(q);
-      const cleanDigits = q.replace(/\D/g, '');
-      const matchAmount = cleanDigits && (
-        String(tx.thu || '').includes(cleanDigits) || 
-        String(tx.chi || '').includes(cleanDigits)
-      );
-      if (!matchTitle && !matchNote && !matchAuthor && !matchAmount) return false;
-    }
+      // 4. Tìm kiếm nội dung, người ghi, ghi chú, số tiền
+      if (searchKeyword.trim()) {
+        const q = searchKeyword.toLowerCase();
+        const matchTitle = (tx.noi_dung || '').toLowerCase().includes(q);
+        const matchNote = (tx.ghi_chu || '').toLowerCase().includes(q);
+        const matchAuthor = (tx.author || '').toLowerCase().includes(q);
+        const cleanDigits = q.replace(/\D/g, '');
+        const matchAmount = cleanDigits && (
+          String(tx.thu || '').includes(cleanDigits) || 
+          String(tx.chi || '').includes(cleanDigits)
+        );
+        if (!matchTitle && !matchNote && !matchAuthor && !matchAmount) return false;
+      }
 
-    return true;
-  });
+      return true;
+    });
+
+    // Sắp xếp nghiêm ngặt từ MỚI TỚI CŨ (Ngày giảm dần -> Giờ giảm dần -> ID giảm dần)
+    return sortTransactionsByDateDesc(list);
+  }, [transactions, filterDate, filterMonth, currentMonth, filterCategory, filterType, searchKeyword]);
 
   const totalThu = filteredList.reduce((s, t) => s + (Number(t.thu) || 0), 0);
   const totalChi = filteredList.reduce((s, t) => s + (Number(t.chi) || 0), 0);
@@ -417,14 +423,14 @@ export default function TransactionList({
             )}
           </div>
 
-          {/* HÀNG BỘ LỌC CHI TIẾT: CHIA 2 HÀNG MỖI HÀNG 2 CỘT */}
-          <div className="w-full grid grid-cols-2 gap-2 pt-1">
+          {/* HÀNG BỘ LỌC CHI TIẾT: TRÊN MOBILE TÁCH RIÊNG 1 CỘT RỘNG RÃI, TRÊN DESKTOP 2 CỘT */}
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
             
             {/* Hàng 1 - Cột 1: Lọc theo Tháng */}
             <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-2.5 sm:px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
               <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold shrink-0">
                 <Calendar size={15} className="text-emerald-700 shrink-0" weight="bold" />
-                <span className="hidden xs:inline sm:inline">Tháng:</span>
+                <span className="inline">Tháng:</span>
               </div>
               <select
                 value={filterMonth}
@@ -440,7 +446,7 @@ export default function TransactionList({
                 className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-1.5 truncate"
               >
                 <option value="current">
-                  {currentMonth?.includes('-') ? `Tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth} (Đang xem)
+                  {currentMonth?.includes('-') ? `Tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth}
                 </option>
                 <option value="all">Tất cả ({transactions.length} khoản)</option>
                 {availableMonths
@@ -590,7 +596,7 @@ export default function TransactionList({
               {/* Tiêu đề bảng */}
               <thead>
                 <tr className="bg-[#1B4D3E] text-white border-b border-emerald-900 font-semibold tracking-wide">
-                  <th className="py-2.5 px-3.5 w-28">Ngày & Giờ</th>
+                  <th className="py-2.5 px-3.5 w-28">Ngày</th>
                   <th className="py-2.5 px-3.5">Nội dung</th>
                   <th className="py-2.5 px-3.5 text-right w-28"># Thu</th>
                   <th className="py-2.5 px-3.5 text-right w-28"># Chi</th>
@@ -617,14 +623,10 @@ export default function TransactionList({
                         key={tx.id} 
                         className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors group"
                       >
-                        {/* Ngày & Giờ */}
+                        {/* Ngày */}
                         <td className="py-2.5 px-3.5 tabular-nums text-slate-600 whitespace-nowrap">
                           <div className="font-medium text-slate-800 leading-tight">
                             {formatDateDisplay(tx.ngay)}
-                          </div>
-                          <div className="text-[11px] text-slate-400 tabular-nums flex items-center gap-1 mt-0.5 font-medium">
-                            <Clock size={11} className="text-slate-400 shrink-0" />
-                            <span>{tx.gio || '08:00'}</span>
                           </div>
                         </td>
 
@@ -759,86 +761,73 @@ export default function TransactionList({
                       key={tx.id} 
                       className="p-3.5 bg-white hover:bg-slate-50/80 border border-slate-200/90 rounded-2xl shadow-2xs space-y-2.5 transition-all"
                     >
-                      {/* HÀNG TRÊN: ICON PHÂN LOẠI + TÊN + BADGE VÀ NÚT SỬA/XÓA */}
-                      <div className="flex items-start justify-between gap-2.5">
-                        
-                        {/* Trái: Icon Phân Loại + Tên giao dịch + Phân loại */}
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${catMeta.bg} shadow-2xs`}>
-                            {catMeta.icon}
-                          </div>
+                      {/* HÀNG TRÊN: ICON PHÂN LOẠI + TIÊU ĐỀ RỘNG RÃI KHÔNG BỊ CẮT CHỮ */}
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${catMeta.bg} shadow-2xs mt-0.5`}>
+                          {catMeta.icon}
+                        </div>
 
-                          <div className="min-w-0 flex-1">
-                            <h4 className="text-sm font-bold text-slate-800 truncate leading-snug">
-                              {tx.noi_dung}
-                            </h4>
-                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                              <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-semibold text-[11px] border border-slate-200/60">
-                                {tx.phan_loai}
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <h4 className="text-sm font-bold text-slate-800 leading-snug break-words">
+                            {tx.noi_dung}
+                          </h4>
+                          {tx.ghi_chu && (
+                            <p className="text-xs text-slate-500 font-normal break-words">
+                              {tx.ghi_chu}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                            <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-semibold text-[11px] border border-slate-200/60">
+                              {tx.phan_loai}
+                            </span>
+                            {tx.loai && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 font-medium text-[10px] border border-slate-200/50">
+                                {tx.loai}
                               </span>
-                              {tx.loai && (
-                                <span className="px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 font-medium text-[10px] border border-slate-200/50">
-                                  {tx.loai}
-                                </span>
-                              )}
-                              {tx.author && (
-                                <span className="text-[11px] text-slate-400 font-medium">
-                                  • {tx.author}
-                                </span>
-                              )}
-                            </div>
+                            )}
+                            {tx.author && (
+                              <span className="text-[11px] text-slate-400 font-medium">
+                                • {tx.author}
+                              </span>
+                            )}
                           </div>
                         </div>
-
-                        {/* Phải: Cụm nút Thao tác Sửa / Xóa */}
-                        <div className="flex items-center gap-1 shrink-0 pt-0.5">
-                          <button
-                            onClick={() => handleOpenEdit(tx)}
-                            className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-400 flex items-center justify-center border border-slate-200/70 transition-colors tactile-btn"
-                            title="Chỉnh sửa giao dịch"
-                          >
-                            <PencilSimple size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteWithConfirm(tx)}
-                            className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 flex items-center justify-center border border-slate-200/70 transition-colors tactile-btn"
-                            title="Xóa giao dịch"
-                          >
-                            <Trash size={15} />
-                          </button>
-                        </div>
-
                       </div>
 
-                      {/* HÀNG DƯỚI: THỜI GIAN BÊN TRÁI & GIÁ TIỀN NẰM DƯỚI TO RÕ RÀNG */}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                        
-                        {/* Thời gian */}
-                        <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                          <span className="tabular-nums font-medium text-slate-600">{formatDateDisplay(tx.ngay)}</span>
-                          <span className="text-slate-300">•</span>
-                          <span className="tabular-nums flex items-center gap-1 text-slate-500">
-                            <Clock size={12} className="text-slate-400" />
-                            <span>{tx.gio || '08:00'}</span>
+                      {/* HÀNG DƯỚI: TÁCH RIÊNG RỘNG RÃI - NGÀY GHI & NÚT SỬA/XÓA BÊN TRÁI, GIÁ TIỀN BÊN PHẢI */}
+                      <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 text-xs">
+                        {/* Ngày & Cụm nút thao tác */}
+                        <div className="flex items-center gap-2">
+                          <span className="tabular-nums font-semibold text-slate-600 text-xs bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/60">
+                            {formatDateDisplay(tx.ngay)}
                           </span>
-                          {tx.vault && tx.vault !== 'shared' && (
-                            <>
-                              <span className="text-slate-300">•</span>
-                              <span className="text-emerald-700 font-medium">
-                                {tx.vault === 'personal_nhut' ? 'Ví Nhựt' : 'Ví Trang'}
-                              </span>
-                            </>
-                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(tx)}
+                            className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-400 flex items-center justify-center border border-slate-200/70 transition-colors tactile-btn"
+                            title="Chỉnh sửa giao dịch"
+                          >
+                            <PencilSimple size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteWithConfirm(tx)}
+                            className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 flex items-center justify-center border border-slate-200/70 transition-colors tactile-btn"
+                            title="Xóa giao dịch"
+                          >
+                            <Trash size={14} />
+                          </button>
                         </div>
 
                         {/* GIÁ TIỀN NẰM DƯỚI TO RÕ RÀNG */}
-                        <div className="text-right">
+                        <div className="text-right pl-2">
                           {isThu ? (
-                            <span className="text-base font-extrabold text-emerald-700 tabular-nums font-money">
+                            <span className="text-base sm:text-lg font-black text-emerald-700 tabular-nums font-money">
                               {privacyMode ? '•••••• đ' : `+${new Intl.NumberFormat('vi-VN').format(tx.thu)} đ`}
                             </span>
                           ) : (
-                            <span className="text-base font-extrabold text-rose-600 tabular-nums font-money">
+                            <span className="text-base sm:text-lg font-black text-rose-600 tabular-nums font-money">
                               {privacyMode ? '•••••• đ' : `-${new Intl.NumberFormat('vi-VN').format(tx.chi)} đ`}
                             </span>
                           )}

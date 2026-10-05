@@ -289,28 +289,12 @@ export default function QuickEntry({
                 </select>
               </div>
 
-              {/* Chọn ví */}
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Không gian:</span>
-                <select
-                  value={confirmingQuickItem.vault}
-                  onChange={(e) => setConfirmingQuickItem({
-                    ...confirmingQuickItem,
-                    vault: e.target.value
-                  })}
-                  className="bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none"
-                >
-                  <option value="shared">Quỹ chung</option>
-                  <option value="personal_nhut">Ví của Nhựt</option>
-                  <option value="personal_trang">Ví của Trang</option>
-                </select>
-              </div>
 
-              {/* Thời gian */}
+              {/* Ngày ghi */}
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">Thời gian:</span>
+                <span className="text-slate-500">Ngày ghi:</span>
                 <span className="text-slate-600 tabular-nums font-medium">
-                  {formatDateDisplay(confirmingQuickItem.ngay)} • {confirmingQuickItem.gio}
+                  {formatDateDisplay(confirmingQuickItem.ngay)}
                 </span>
               </div>
 

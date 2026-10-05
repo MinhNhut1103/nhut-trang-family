@@ -145,29 +145,29 @@ export default function DailyReminderCard({
         </div>
 
         {/* PHẦN 2: DANH SÁCH CHI TIẾT TỪNG NGÀY CHƯA ĐIỀN */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           {missingDays.map((day) => (
             <div 
               key={day.iso}
-              className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all ${
+              className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all ${
                 day.isToday 
                   ? 'bg-amber-100/40 border-amber-300/80 shadow-2xs' 
                   : 'bg-white/95 border-amber-200/70 hover:border-amber-300'
               }`}
             >
               {/* Thông tin ngày */}
-              <div className="flex items-center gap-2 min-w-0">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs ${
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs ${
                   day.isToday ? 'bg-amber-200 text-amber-900' : 'bg-slate-100 text-slate-700'
                 }`}>
-                  <Calendar size={14} weight="bold" />
+                  <Calendar size={16} weight="bold" />
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900 tabular-nums">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 tabular-nums">
                       {formatDateDisplay(day.iso)}
                     </span>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
                       day.isToday 
                         ? 'bg-rose-100 text-rose-700 font-bold' 
                         : day.isYesterday 
@@ -177,28 +177,28 @@ export default function DailyReminderCard({
                       {day.relativeLabel}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 block truncate">
+                  <span className="text-[11px] text-slate-500 block mt-0.5">
                     Chưa có khoản thu chi nào
                   </span>
                 </div>
               </div>
 
-              {/* Nút hành động cho ngày này */}
-              <div className="flex items-center gap-1.5 shrink-0">
+              {/* Nút hành động cho ngày này: tách riêng dòng trên mobile cho thoáng */}
+              <div className="flex items-center gap-2 w-full sm:w-auto pt-2 border-t border-amber-200/40 sm:border-t-0 sm:pt-0 shrink-0">
                 <button
                   type="button"
                   onClick={() => onOpenAddTransaction && onOpenAddTransaction(day.iso)}
-                  className="py-1 px-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1 shadow-2xs tactile-btn transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-none py-1.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs tactile-btn transition-colors cursor-pointer"
                   title={`Ghi thu chi cho ngày ${formatDateDisplay(day.iso)}`}
                 >
-                  <Plus size={12} weight="bold" />
+                  <Plus size={13} weight="bold" />
                   <span>Ghi ngày này</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleMarkZeroExpense(day.iso)}
-                  className="py-1 px-2 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                  className="py-1.5 px-2.5 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0"
                   title="Ngày này không có phát sinh chi tiêu (0đ)"
                 >
                   <span>0đ</span>

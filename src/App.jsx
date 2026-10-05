@@ -9,11 +9,16 @@ import {
   initialProfile, 
   initialMonthlyConfig,
   initialSeptemberConfig,
+  initialAugustConfig,
   septemberTransactions,
+  augustTransactions,
   categoriesList,
   macroTypesList,
   getRandomTime,
-  initialMembers
+  initialMembers,
+  initialGoals,
+  sortTransactionsByDateDesc,
+  normalizeDateISO
 } from './data/initialData';
 import { 
   isSupabaseConfigured, 
@@ -28,7 +33,8 @@ import {
   getFamilyMembers,
   addFamilyMember,
   updateFamilyMember,
-  deleteFamilyMember
+  deleteFamilyMember,
+  syncAllLocalToSupabase
 } from './supabaseClient';
 import CategoryManagerModal from './components/CategoryManagerModal';
 import MemberManagerModal from './components/MemberManagerModal';
@@ -82,6 +88,12 @@ export default function App() {
         banner_focus: initialSeptemberConfig.banner_focus,
         han_muc_chi: initialSeptemberConfig.han_muc_chi,
         ghi_chu: initialSeptemberConfig.ghi_chu
+      },
+      '2026-08': {
+        id: '2026-08',
+        banner_focus: initialAugustConfig.banner_focus,
+        han_muc_chi: initialAugustConfig.han_muc_chi,
+        ghi_chu: initialAugustConfig.ghi_chu
       }
     };
     if (saved) {
@@ -90,7 +102,8 @@ export default function App() {
         return {
           ...defaults,
           ...parsed,
-          '2026-09': parsed['2026-09'] || defaults['2026-09']
+          '2026-09': parsed['2026-09'] || defaults['2026-09'],
+          '2026-08': parsed['2026-08'] || defaults['2026-08']
         };
       } catch (e) {
         console.error('Error parsing nt_monthly_configs:', e);
@@ -105,20 +118,25 @@ export default function App() {
     const saved = localStorage.getItem('nt_transactions');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
+        let parsed = JSON.parse(saved);
         const hasSep = parsed.some((t) => (t.ngay || '').startsWith('2026-09'));
         if (!hasSep) {
-          return [...septemberTransactions, ...parsed];
+          parsed = [...septemberTransactions, ...parsed];
         }
-        return parsed.map((t) => ({
+        const hasAug = parsed.some((t) => (t.ngay || '').startsWith('2026-08'));
+        if (!hasAug) {
+          parsed = [...augustTransactions, ...parsed];
+        }
+        const withTime = parsed.map((t) => ({
           ...t,
           gio: t.gio || getRandomTime()
         }));
+        return sortTransactionsByDateDesc(withTime);
       } catch (e) {
-        return initialTransactions;
+        return sortTransactionsByDateDesc(initialTransactions);
       }
     }
-    return initialTransactions;
+    return sortTransactionsByDateDesc(initialTransactions);
   });
 
   const [categories, setCategories] = useState(() => {
@@ -183,27 +201,52 @@ export default function App() {
             ...t,
             gio: t.gio || getRandomTime()
           }));
-          setTransactions(withTime);
+          setTransactions(sortTransactionsByDateDesc(withTime));
           showToast('Đã đồng bộ dữ liệu từ Supabase Cloud');
         }
       });
 
       // Đồng bộ toàn bộ cấu hình & ghi chú của các tháng từ Supabase
-      getAllMonthlyConfigs().then((cloudConfigs) => {
+      getAllMonthlyConfigs().then(async (cloudConfigs) => {
+        const merged = {};
         if (cloudConfigs && cloudConfigs.length > 0) {
-          setMonthlyConfigs((prev) => {
-            const merged = { ...prev };
-            cloudConfigs.forEach((c) => {
-              merged[c.id] = {
-                id: c.id,
-                banner_focus: c.banner_focus || '',
-                han_muc_chi: Number(c.han_muc_chi) || 30000000,
-                ghi_chu: c.ghi_chu || ''
-              };
-            });
-            return merged;
+          cloudConfigs.forEach((c) => {
+            merged[c.id] = {
+              id: c.id,
+              banner_focus: c.banner_focus || '',
+              han_muc_chi: Number(c.han_muc_chi) || 30000000,
+              ghi_chu: c.ghi_chu || '',
+              tien_ngoai_vi: Number(c.tien_ngoai_vi) || 0,
+              tien_trong_the: Number(c.tien_trong_the) || 0
+            };
           });
         }
+
+        // Tự động kiểm tra: Nếu là ngày 1 (hoặc tháng hiện tại chưa có), tự động tạo cấu hình tháng mới
+        const sysMonth = getSystemCurrentMonth();
+        if (!merged[sysMonth]) {
+          const sortedKeys = Object.keys(merged).sort().reverse();
+          const lastMonthKey = sortedKeys[0];
+          const lastHanMuc = lastMonthKey && merged[lastMonthKey]?.han_muc_chi
+            ? Number(merged[lastMonthKey].han_muc_chi)
+            : 30000000;
+          const [y, m] = sysMonth.split('-');
+          const autoMonth = {
+            id: sysMonth,
+            banner_focus: 'Khởi đầu tháng mới: Chi tiêu thông minh & tiết kiệm',
+            han_muc_chi: lastHanMuc,
+            ghi_chu: `Sổ chi tiêu Tháng ${m}/${y} (Hệ thống tự động khởi tạo)`,
+            tien_ngoai_vi: 0,
+            tien_trong_the: 0
+          };
+          merged[sysMonth] = autoMonth;
+          upsertMonthlyConfig(autoMonth).catch(console.error);
+        }
+
+        setMonthlyConfigs((prev) => ({
+          ...prev,
+          ...merged
+        }));
       });
 
       // Đồng bộ danh sách thành viên gia đình từ Supabase
@@ -223,6 +266,57 @@ export default function App() {
       });
     }
   }, []);
+
+  // Tự động rà soát ngày 1 tháng mới khi mở app hoặc chuyển tab
+  useEffect(() => {
+    const checkAndProvisionNewMonth = async () => {
+      const sysMonth = getSystemCurrentMonth();
+      if (!monthlyConfigs[sysMonth]) {
+        const sorted = Object.keys(monthlyConfigs).sort().reverse();
+        const prevHanMuc = sorted[0] && monthlyConfigs[sorted[0]]?.han_muc_chi
+          ? Number(monthlyConfigs[sorted[0]].han_muc_chi)
+          : 30000000;
+        const [y, m] = sysMonth.split('-');
+        const newMonthObj = {
+          id: sysMonth,
+          banner_focus: 'Khởi đầu tháng mới: Chi tiêu thông minh & tiết kiệm',
+          han_muc_chi: prevHanMuc,
+          ghi_chu: `Sổ chi tiêu Tháng ${m}/${y} (Tự động khởi tạo)`,
+          tien_ngoai_vi: 0,
+          tien_trong_the: 0
+        };
+
+        setMonthlyConfigs((prev) => ({
+          ...prev,
+          [sysMonth]: newMonthObj
+        }));
+
+        if (isSupabaseConfigured) {
+          try {
+            await upsertMonthlyConfig(newMonthObj);
+          } catch (e) {
+            console.error('Lỗi tự động tạo tháng mới:', e);
+          }
+        }
+        showToast(`🎉 Chào Tháng ${m}/${y}! Đã tự động tạo sổ tháng mới.`);
+      }
+    };
+
+    checkAndProvisionNewMonth();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkAndProvisionNewMonth();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    const interval = setInterval(checkAndProvisionNewMonth, 30 * 60 * 1000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(interval);
+    };
+  }, [monthlyConfigs]);
 
   // 3. Tự động lưu LocalStorage trên máy
   useEffect(() => {
@@ -282,6 +376,46 @@ export default function App() {
     }
   };
 
+  const handleUpdateTienNgoaiVi = (val) => {
+    const updatedCfg = {
+      ...(monthlyConfigs[currentMonth] || { id: currentMonth }),
+      tien_ngoai_vi: Number(val) || 0
+    };
+    setMonthlyConfigs((prev) => ({
+      ...prev,
+      [currentMonth]: updatedCfg
+    }));
+    showToast(`Đã lưu tiền ngoài ví: ${new Intl.NumberFormat('vi-VN').format(val)} đ`);
+
+    if (isSupabaseConfigured) {
+      try {
+        upsertMonthlyConfig(updatedCfg);
+      } catch (err) {
+        console.error('Lỗi lưu tiền ngoài ví lên Supabase:', err);
+      }
+    }
+  };
+
+  const handleUpdateTienTrongThe = (val) => {
+    const updatedCfg = {
+      ...(monthlyConfigs[currentMonth] || { id: currentMonth }),
+      tien_trong_the: Number(val) || 0
+    };
+    setMonthlyConfigs((prev) => ({
+      ...prev,
+      [currentMonth]: updatedCfg
+    }));
+    showToast(`Đã lưu tiền trong thẻ: ${new Intl.NumberFormat('vi-VN').format(val)} đ`);
+
+    if (isSupabaseConfigured) {
+      try {
+        upsertMonthlyConfig(updatedCfg);
+      } catch (err) {
+        console.error('Lỗi lưu tiền trong thẻ lên Supabase:', err);
+      }
+    }
+  };
+
   const handleAddMonth = (monthStr) => {
     if (!monthlyConfigs[monthStr]) {
       const initialCfg = {
@@ -302,6 +436,7 @@ export default function App() {
     set.add(currentMonth);
     set.add('2026-10');
     set.add('2026-09');
+    set.add('2026-08');
     transactions.forEach((t) => {
       if (t.ngay && t.ngay.length >= 7) {
         set.add(t.ngay.slice(0, 7));
@@ -320,7 +455,10 @@ export default function App() {
 
   // Các giao dịch thuộc tháng đang chọn
   const currentMonthTransactions = useMemo(() => {
-    return transactions.filter((t) => (t.ngay || '').startsWith(currentMonth));
+    return transactions.filter((t) => {
+      const iso = normalizeDateISO(t.ngay);
+      return iso.startsWith(currentMonth);
+    });
   }, [transactions, currentMonth]);
 
   // Quản lý CRUD Phân loại
@@ -436,7 +574,7 @@ export default function App() {
 
   // Thêm giao dịch
   const handleAddTransaction = async (newTx) => {
-    setTransactions((prev) => [newTx, ...prev]);
+    setTransactions((prev) => sortTransactionsByDateDesc([newTx, ...prev]));
 
     if (isSupabaseConfigured) {
       try {
@@ -466,7 +604,7 @@ export default function App() {
     const updates = typeof updatesOrField === 'object' ? updatesOrField : { [updatesOrField]: value };
 
     setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+      sortTransactionsByDateDesc(prev.map((t) => (t.id === id ? { ...t, ...updates } : t)))
     );
     showToast('Đã cập nhật khoản thu chi');
 
@@ -476,6 +614,29 @@ export default function App() {
       } catch (err) {
         console.error('Lỗi cập nhật Supabase:', err);
       }
+    }
+  };
+
+  // Đồng bộ toàn bộ dữ liệu hiện tại lên Supabase Cloud
+  const handleSyncAllToSupabase = async () => {
+    try {
+      showToast('Đang kết nối và lưu dữ liệu lên Supabase...');
+      const res = await syncAllLocalToSupabase({
+        transactions,
+        monthlyConfigs,
+        members,
+        goals: initialGoals
+      });
+      showToast(`Đã đồng bộ ${res.transactionsCount} giao dịch lên Supabase!`);
+      return { success: true, ...res };
+    } catch (err) {
+      console.error('Lỗi đồng bộ Supabase:', err);
+      if (err.code === 'PGRST205' || err.message?.includes('schema cache')) {
+        alert('⚠️ Bảng chưa tồn tại trên Supabase Database!\n\nVui lòng mở Supabase Dashboard -> SQL Editor, copy nội dung file supabase/schema.sql và bấm RUN trước nhé.');
+      } else {
+        alert('Lỗi khi lưu Supabase: ' + (err.message || 'Không thể kết nối'));
+      }
+      return { success: false, error: err };
     }
   };
 
@@ -577,6 +738,7 @@ export default function App() {
         currentMonth={currentMonth}
         onLogout={handleLogout}
         onOpenMemberManager={() => setIsMemberManagerOpen(true)}
+        onSyncSupabase={handleSyncAllToSupabase}
       />
 
       {/* Nội dung chính: Khoảng trắng giữa tất cả các phần đều tăm tắp (space-y-3) */}
@@ -596,6 +758,9 @@ export default function App() {
           monthlyConfig={activeMonthlyConfig}
           onOpenMonthManager={() => setIsMonthManagerOpen(true)}
           privacyMode={privacyMode}
+          availableMonths={availableMonths}
+          onUpdateTienNgoaiVi={handleUpdateTienNgoaiVi}
+          onUpdateTienTrongThe={handleUpdateTienTrongThe}
         />
 
         {/* Biểu đồ tròn cơ cấu chi tiêu & thu nhập theo phân loại */}

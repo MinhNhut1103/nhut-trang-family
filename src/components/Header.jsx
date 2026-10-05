@@ -19,9 +19,11 @@ export default function Header({
   currentUser,
   currentMonth,
   onLogout,
-  onOpenMemberManager
+  onOpenMemberManager,
+  onSyncSupabase
 }) {
   const [showConfigModal, setShowConfigModal] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Hỗ trợ phím Esc để tắt popup thông tin Supabase
   useEffect(() => {
@@ -34,6 +36,16 @@ export default function Header({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showConfigModal]);
+
+  const handleTriggerSync = async () => {
+    if (!onSyncSupabase) return;
+    setIsSyncing(true);
+    try {
+      await onSyncSupabase();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 md:px-8 py-2.5 md:py-3">
@@ -137,13 +149,18 @@ export default function Header({
           onClick={() => setShowConfigModal(false)}
         >
           <div 
-            className="w-full max-w-md bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4"
+            className="w-full max-w-lg bg-white p-6 rounded-2xl border border-slate-200 shadow-2xl space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-sm">
-                Trạng Thái Dữ Liệu
-              </h3>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Database size={16} weight="bold" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  Đồng Bộ Dữ Liệu Supabase Cloud
+                </h3>
+              </div>
               <button 
                 onClick={() => setShowConfigModal(false)}
                 className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
@@ -153,24 +170,58 @@ export default function Header({
             </div>
 
             <div className="text-xs text-slate-600 space-y-3 leading-relaxed">
-              <p>
-                Dự án đã tích hợp sẵn <strong>Supabase</strong> để đồng bộ dữ liệu thời gian thực giữa hai vợ chồng.
-              </p>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <span className="font-semibold text-slate-800">Khởi tạo dữ liệu trên Supabase:</span>
-                <p className="text-slate-500">
-                  Mở mục <em>SQL Editor</em> trên trang Supabase của bạn, dán mã trong file <code>supabase/schema.sql</code> và bấm Chạy (Run).
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-slate-600">Trạng thái cấu hình:</span>
+                <span className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
+                  isSupabaseConfigured 
+                    ? 'bg-emerald-100 text-emerald-800' 
+                    : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {isSupabaseConfigured ? '✓ Đã kết nối Supabase' : 'Chưa cấu hình'}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200/80 space-y-2 text-slate-700">
+                <p className="font-semibold text-emerald-900 flex items-center gap-1.5">
+                  ⚡ Hướng dẫn lưu toàn bộ dữ liệu vào Supabase:
+                </p>
+                <ol className="list-decimal pl-4 space-y-1 text-slate-600 leading-normal">
+                  <li>
+                    Mở <strong>Supabase Dashboard</strong> &gt; vào mục <strong>SQL Editor</strong>.
+                  </li>
+                  <li>
+                    Sao chép toàn bộ file <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-mono text-[11px]">supabase/schema.sql</code>.
+                  </li>
+                  <li>
+                    Dán vào SQL Editor và nhấn nút <strong>Run</strong> xanh lá.
+                  </li>
+                </ol>
+                <p className="text-[11px] text-emerald-700 italic pt-1">
+                  Mã SQL này sẽ tự động tạo bảng và nạp sẵn 319 giao dịch thu chi + cấu hình 3 tháng + thành viên + mục tiêu tiết kiệm!
                 </p>
               </div>
-              <p className="text-slate-500">
-                Nếu chưa kết nối mạng hoặc chưa cấu hình Supabase, hệ thống vẫn tự động lưu trữ trên bộ nhớ máy (LocalStorage) một cách an toàn.
-              </p>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <span className="font-semibold text-slate-800">Hoặc chạy qua dòng lệnh Terminal:</span>
+                <div className="p-2 rounded-lg bg-slate-900 text-emerald-400 font-mono text-[11px] select-all">
+                  npm run seed:supabase
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
+              <button
+                onClick={handleTriggerSync}
+                disabled={isSyncing}
+                className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs tactile-btn flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                <Database size={15} weight="bold" />
+                <span>{isSyncing ? 'Đang đẩy dữ liệu...' : 'Đẩy tất cả dữ liệu lên Supabase'}</span>
+              </button>
+
               <button
                 onClick={() => setShowConfigModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white font-medium text-xs tactile-btn"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs tactile-btn"
               >
                 Đóng
               </button>

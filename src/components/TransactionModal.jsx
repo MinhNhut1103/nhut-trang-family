@@ -266,71 +266,40 @@ export default function TransactionModal({
             </div>
           </div>
 
-          {/* 4. Ngày & Giờ */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-slate-500 font-medium mb-1 flex items-center gap-1">
-                <Calendar size={13} className="text-slate-400" />
-                <span>Ngày ghi</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.ngay}
-                onChange={(e) => setFormData({ ...formData, ngay: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:bg-white focus:border-emerald-500 tabular-nums"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-500 font-medium mb-1 flex items-center gap-1">
-                <Clock size={13} className="text-slate-400" />
-                <span>Thời gian</span>
-              </label>
-              <input
-                type="time"
-                required
-                value={formData.gio}
-                onChange={(e) => setFormData({ ...formData, gio: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:bg-white focus:border-emerald-500 tabular-nums"
-              />
-            </div>
+          {/* 4. Ngày ghi */}
+          <div>
+            <label className="block text-slate-500 font-medium mb-1 flex items-center gap-1">
+              <Calendar size={13} className="text-slate-400" />
+              <span>Ngày ghi</span>
+            </label>
+            <input
+              type="date"
+              required
+              value={formData.ngay}
+              onChange={(e) => setFormData({ ...formData, ngay: e.target.value })}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:bg-white focus:border-emerald-500 tabular-nums"
+            />
           </div>
 
-          {/* 5. Không gian ví & Người ghi */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-slate-500 font-medium mb-1">Không gian ví</label>
-              <select
-                value={formData.vault}
-                onChange={(e) => setFormData({ ...formData, vault: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:bg-white focus:border-emerald-500"
-              >
-                <option value="shared">Quỹ chung</option>
-                <option value="personal_nhut">Ví của Nhựt</option>
-                <option value="personal_trang">Ví của Trang</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-slate-500 font-medium mb-1">Người ghi</label>
-              <select
-                value={formData.author}
-                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:bg-white focus:border-emerald-500"
-              >
-                {members.length > 0 ? (
-                  members.map(m => (
-                    <option key={m.id} value={m.name}>{m.name} ({m.username})</option>
-                  ))
-                ) : (
-                  <>
-                    <option value="Nhựt">Nhựt</option>
-                    <option value="Trang">Trang</option>
-                  </>
-                )}
-              </select>
-            </div>
+          {/* 5. Người ghi */}
+          <div>
+            <label className="block text-slate-500 font-medium mb-1">Người ghi</label>
+            <select
+              value={formData.author}
+              onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:bg-white focus:border-emerald-500"
+            >
+              {members.length > 0 ? (
+                members.map(m => (
+                  <option key={m.id} value={m.name}>{m.name} ({m.username})</option>
+                ))
+              ) : (
+                <>
+                  <option value="Nhựt">Nhựt</option>
+                  <option value="Trang">Trang</option>
+                </>
+              )}
+            </select>
           </div>
 
           {/* 6. Ghi chú */}

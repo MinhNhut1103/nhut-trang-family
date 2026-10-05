@@ -226,3 +226,136 @@ export async function deleteFamilyMember(id) {
   return true;
 }
 
+// ==========================================
+// 5. MỤC TIÊU TIẾT KIỆM (SAVINGS GOALS)
+// ==========================================
+
+export async function getSavingsGoals() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('savings_goals')
+    .select('*')
+    .order('created_at', { ascending: true });
+  
+  if (error) {
+    if (!isSchemaMissing(error)) {
+      console.error('Error fetching savings_goals from Supabase:', error);
+    }
+    return null;
+  }
+  return data;
+}
+
+export async function upsertSavingsGoal(goal) {
+  if (!supabase) return null;
+  const payload = {
+    id: goal.id,
+    title: goal.title,
+    target: Number(goal.target) || 0,
+    current: Number(goal.current) || 0,
+    icon: goal.icon || 'ShieldCheck',
+    color: goal.color || 'emerald'
+  };
+
+  const { data, error } = await supabase
+    .from('savings_goals')
+    .upsert(payload)
+    .select();
+  
+  if (error) {
+    console.error('Error upserting savings goal:', error);
+    throw error;
+  }
+  return data[0];
+}
+
+// ==========================================
+// 6. ĐỒNG BỘ TOÀN DIỆN LÊN SUPABASE CLOUD
+// ==========================================
+
+export async function syncAllLocalToSupabase({ transactions = [], monthlyConfigs = {}, members = [], goals = [] }) {
+  if (!supabase) throw new Error('Supabase chưa được cấu hình');
+
+  const results = {
+    transactionsCount: 0,
+    configsCount: 0,
+    membersCount: 0,
+    goalsCount: 0
+  };
+
+  // 1. Members
+  if (members && members.length > 0) {
+    const memPayload = members.map((m) => ({
+      id: m.id,
+      username: m.username,
+      name: m.name,
+      pin_hash: m.pin || m.pin_hash || '1234',
+      role: m.role || 'Thành viên',
+      vault: m.vault || `personal_${m.username}`,
+      color: m.color || 'emerald',
+      updated_at: new Date().toISOString()
+    }));
+    const { error: memErr } = await supabase.from('family_members').upsert(memPayload);
+    if (memErr) throw memErr;
+    results.membersCount = memPayload.length;
+  }
+
+  // 2. Configs
+  const configList = Object.values(monthlyConfigs || {});
+  if (configList.length > 0) {
+    const confPayload = configList.map((c) => ({
+      id: c.id,
+      banner_focus: c.banner_focus || '',
+      han_muc_chi: Number(c.han_muc_chi) || 30000000,
+      ghi_chu: c.ghi_chu || '',
+      updated_at: new Date().toISOString()
+    }));
+    const { error: confErr } = await supabase.from('monthly_config').upsert(confPayload);
+    if (confErr) throw confErr;
+    results.configsCount = confPayload.length;
+  }
+
+  // 3. Goals
+  if (goals && goals.length > 0) {
+    const goalPayload = goals.map((g) => ({
+      id: g.id,
+      title: g.title,
+      target: Number(g.target) || 0,
+      current: Number(g.current) || 0,
+      icon: g.icon || 'ShieldCheck',
+      color: g.color || 'emerald'
+    }));
+    const { error: goalErr } = await supabase.from('savings_goals').upsert(goalPayload);
+    if (goalErr) throw goalErr;
+    results.goalsCount = goalPayload.length;
+  }
+
+  // 4. Transactions (batch 50)
+  if (transactions && transactions.length > 0) {
+    const txPayload = transactions.map((t) => ({
+      id: t.id,
+      ngay: t.ngay,
+      gio: t.gio || '08:00',
+      noi_dung: t.noi_dung,
+      thu: Number(t.thu) || 0,
+      chi: Number(t.chi) || 0,
+      phan_loai: t.phan_loai || 'ăn uống',
+      loai: t.loai || 'thiết yếu',
+      vault: t.vault || 'shared',
+      author: t.author || 'Nhựt',
+      ghi_chu: t.ghi_chu || ''
+    }));
+
+    const batchSize = 50;
+    for (let i = 0; i < txPayload.length; i += batchSize) {
+      const batch = txPayload.slice(i, i + batchSize);
+      const { error: txErr } = await supabase.from('transactions').upsert(batch);
+      if (txErr) throw txErr;
+      results.transactionsCount += batch.length;
+    }
+  }
+
+  return results;
+}
+
+
