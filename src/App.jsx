@@ -33,6 +33,8 @@ import {
 import CategoryManagerModal from './components/CategoryManagerModal';
 import MemberManagerModal from './components/MemberManagerModal';
 import MonthManagerModal from './components/MonthManagerModal';
+import TransactionModal from './components/TransactionModal';
+import DailyReminderCard from './components/DailyReminderCard';
 import LoginForm from './components/LoginForm';
 import { Check } from '@phosphor-icons/react';
 
@@ -133,6 +135,28 @@ export default function App() {
   });
 
   const [isMemberManagerOpen, setIsMemberManagerOpen] = useState(false);
+
+  // Modal Thêm / Sửa thu chi toàn cục (dùng cho cả DailyReminderCard và TransactionList)
+  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState(null);
+
+  const handleOpenAddTx = () => {
+    setEditingTx(null);
+    setIsTxModalOpen(true);
+  };
+
+  const handleOpenEditTx = (tx) => {
+    setEditingTx(tx);
+    setIsTxModalOpen(true);
+  };
+
+  const handleSaveTxModal = (txData) => {
+    if (editingTx) {
+      handleUpdateTransaction(editingTx.id, txData);
+    } else {
+      handleAddTransaction(txData);
+    }
+  };
 
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -515,6 +539,19 @@ export default function App() {
         onAddMonth={handleAddMonth}
       />
 
+      {/* Modal Thêm & Sửa Thu Chi Toàn Cục */}
+      <TransactionModal
+        isOpen={isTxModalOpen}
+        onClose={() => setIsTxModalOpen(false)}
+        transactionToEdit={editingTx}
+        onSave={handleSaveTxModal}
+        categories={categories}
+        macroTypes={macroTypes}
+        members={members}
+        activeUser={activeUser}
+        currentMonth={currentMonth}
+      />
+
       {/* Đầu trang (Thanh điều hướng dính) */}
       <Header
         activeUser={activeUser}
@@ -529,6 +566,13 @@ export default function App() {
 
       {/* Nội dung chính: Khoảng trắng giữa tất cả các phần đều tăm tắp (space-y-3) */}
       <main className="space-y-3 pt-3">
+        {/* Thông báo dạng card mỗi ngày khi chưa điền thu chi ngày đó */}
+        <DailyReminderCard
+          transactions={transactions}
+          onOpenAddTransaction={handleOpenAddTx}
+          onShowToast={showToast}
+        />
+
         {/* Tổng quan tháng & ghi chú riêng của tháng */}
         <BudgetPulse
           transactions={currentMonthTransactions}
@@ -574,6 +618,8 @@ export default function App() {
           macroTypes={macroTypes}
           members={members}
           onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
+          onOpenAdd={handleOpenAddTx}
+          onOpenEdit={handleOpenEditTx}
         />
       </main>
 

@@ -136,7 +136,9 @@ export default function TransactionList({
   onOpenCategoryManager,
   privacyMode, 
   activeVault = 'all',
-  activeUser
+  activeUser,
+  onOpenAdd: externalOpenAdd,
+  onOpenEdit: externalOpenEdit
 }) {
   const [filterMonth, setFilterMonth] = useState('current');
   const [filterDate, setFilterDate] = useState('');
@@ -164,14 +166,22 @@ export default function TransactionList({
 
   // Mở modal thêm mới
   const handleOpenAdd = () => {
-    setEditingTx(null);
-    setIsModalOpen(true);
+    if (externalOpenAdd) {
+      externalOpenAdd();
+    } else {
+      setEditingTx(null);
+      setIsModalOpen(true);
+    }
   };
 
   // Mở modal sửa
   const handleOpenEdit = (tx) => {
-    setEditingTx(tx);
-    setIsModalOpen(true);
+    if (externalOpenEdit) {
+      externalOpenEdit(tx);
+    } else {
+      setEditingTx(tx);
+      setIsModalOpen(true);
+    }
   };
 
   // Lưu từ modal (thêm hoặc sửa)
@@ -865,18 +875,20 @@ export default function TransactionList({
 
       </div>
 
-      {/* POPUP THÊM & SỬA THU CHI */}
-      <TransactionModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        transactionToEdit={editingTx}
-        onSave={handleSaveModal}
-        categories={categories}
-        macroTypes={macroTypes}
-        members={members}
-        activeUser={activeUser}
-        currentMonth={currentMonth}
-      />
+      {/* POPUP THÊM & SỬA THU CHI (Dùng dự phòng nếu không dùng modal cấp App) */}
+      {!externalOpenAdd && (
+        <TransactionModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          transactionToEdit={editingTx}
+          onSave={handleSaveModal}
+          categories={categories}
+          macroTypes={macroTypes}
+          members={members}
+          activeUser={activeUser}
+          currentMonth={currentMonth}
+        />
+      )}
 
     </section>
   );
