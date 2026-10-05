@@ -139,14 +139,17 @@ export default function App() {
   // Modal Thêm / Sửa thu chi toàn cục (dùng cho cả DailyReminderCard và TransactionList)
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
+  const [modalDefaultDate, setModalDefaultDate] = useState(null);
 
-  const handleOpenAddTx = () => {
+  const handleOpenAddTx = (customDate = null) => {
     setEditingTx(null);
+    setModalDefaultDate(typeof customDate === 'string' ? customDate : null);
     setIsTxModalOpen(true);
   };
 
   const handleOpenEditTx = (tx) => {
     setEditingTx(tx);
+    setModalDefaultDate(null);
     setIsTxModalOpen(true);
   };
 
@@ -542,8 +545,12 @@ export default function App() {
       {/* Modal Thêm & Sửa Thu Chi Toàn Cục */}
       <TransactionModal
         isOpen={isTxModalOpen}
-        onClose={() => setIsTxModalOpen(false)}
+        onClose={() => {
+          setIsTxModalOpen(false);
+          setModalDefaultDate(null);
+        }}
         transactionToEdit={editingTx}
+        defaultDate={modalDefaultDate}
         onSave={handleSaveTxModal}
         categories={categories}
         macroTypes={macroTypes}

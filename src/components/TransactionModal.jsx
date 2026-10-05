@@ -6,6 +6,7 @@ export default function TransactionModal({
   isOpen,
   onClose,
   transactionToEdit = null, // null = Thêm mới, object = Sửa
+  defaultDate = null,
   onSave,
   categories = [],
   macroTypes = [],
@@ -16,6 +17,7 @@ export default function TransactionModal({
   const isEditing = Boolean(transactionToEdit);
 
   const getInitialDate = () => {
+    if (defaultDate) return defaultDate;
     const today = new Date().toISOString().split('T')[0];
     if (currentMonth && !today.startsWith(currentMonth)) {
       return `${currentMonth}-01`;
@@ -62,7 +64,7 @@ export default function TransactionModal({
         actionType: 'chi',
         so_tien: '',
         noi_dung: '',
-        ngay: getInitialDate(),
+        ngay: defaultDate || getInitialDate(),
         gio: getCurrentTime(),
         phan_loai: categories[0] || 'ăn uống',
         loai: macroTypes[0] || 'thiết yếu',
@@ -71,7 +73,7 @@ export default function TransactionModal({
         ghi_chu: ''
       });
     }
-  }, [isOpen, transactionToEdit, categories, macroTypes, members, activeUser, currentMonth]);
+  }, [isOpen, transactionToEdit, defaultDate, categories, macroTypes, members, activeUser, currentMonth]);
 
   // Hỗ trợ phím Esc để đóng modal
   useEffect(() => {
