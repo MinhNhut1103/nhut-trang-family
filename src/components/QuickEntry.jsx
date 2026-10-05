@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, CaretDown, CaretUp, Check, Clock, X, ChatText, PencilSimple } from '@phosphor-icons/react';
+import { Plus, Check, X } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList, getCurrentTime } from '../data/initialData';
-import { parseBankSMS } from '../utils/parser';
 
 export default function QuickEntry({ 
   onAddTransaction, 
@@ -13,9 +12,6 @@ export default function QuickEntry({
   members = [],
   currentMonth
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [showSmsBox, setShowSmsBox] = useState(false);
-  const [smsText, setSmsText] = useState('');
   const [confirmingQuickItem, setConfirmingQuickItem] = useState(null);
 
   const getInitialDate = () => {
@@ -49,29 +45,7 @@ export default function QuickEntry({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [confirmingQuickItem, isAddingPreset]);
 
-  const [formData, setFormData] = useState({
-    ngay: getInitialDate(),
-    gio: getCurrentTime(),
-    noi_dung: '',
-    actionType: 'chi', // 'chi' | 'thu'
-    so_tien: '',
-    phan_loai: categories[0] || 'ăn uống',
-    loai: macroTypes[0] || 'thiết yếu',
-    vault: activeVault === 'all' ? 'shared' : activeVault,
-    ghi_chu: ''
-  });
-
-  useEffect(() => {
-    if (currentMonth) {
-      const today = new Date().toISOString().split('T')[0];
-      setFormData(prev => ({
-        ...prev,
-        ngay: !today.startsWith(currentMonth) ? `${currentMonth}-01` : today
-      }));
-    }
-  }, [currentMonth]);
-
-  // Danh sách mục thêm nhanh do người dùng tự quản lý (mặc định rỗng)
+  // Danh sách mục thêm nhanh do người dùng tự quản lý (mặc định lưu localStorage)
   const [quickList, setQuickList] = useState(() => {
     const saved = localStorage.getItem('nt_quick_presets');
     return saved ? JSON.parse(saved) : [];
@@ -160,63 +134,12 @@ export default function QuickEntry({
     setConfirmingQuickItem(null);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const num = parseInt((formData.so_tien || '0').replace(/\D/g, ''), 10);
-    if (!formData.noi_dung || num <= 0) {
-      alert('Vui lòng điền nội dung và số tiền hợp lệ!');
-      return;
-    }
-
-    const currentMember = members.find(m => m.username === activeUser);
-    const authorName = currentMember ? currentMember.name : (activeUser === 'nhut' ? 'Nhựt' : 'Trang');
-
-    const newTx = {
-      id: 'tx-' + Date.now(),
-      ngay: formData.ngay || new Date().toISOString().split('T')[0],
-      gio: formData.gio || getCurrentTime(),
-      noi_dung: formData.noi_dung.trim(),
-      thu: formData.actionType === 'thu' ? num : 0,
-      chi: formData.actionType === 'chi' ? num : 0,
-      phan_loai: formData.phan_loai,
-      loai: formData.loai,
-      vault: formData.vault,
-      author: authorName,
-      ghi_chu: formData.ghi_chu.trim()
-    };
-
-    onAddTransaction(newTx);
-    onShowToast(`Đã lưu vào sổ: ${newTx.noi_dung}`);
-    
-    // Reset form giữ ngày
-    setFormData(prev => ({
-      ...prev,
-      gio: getCurrentTime(),
-      noi_dung: '',
-      so_tien: '',
-      ghi_chu: ''
-    }));
-    setIsExpanded(false);
-  };
-
-  const handleParseSms = () => {
-    if (!smsText.trim()) return;
-    const result = parseBankSMS(smsText, activeUser);
-    if (result) {
-      onAddTransaction(result);
-      const val = result.thu > 0 ? `+${result.thu}` : `-${result.chi}`;
-      onShowToast(`Đã nhận diện từ tin nhắn: ${result.noi_dung} (${val} đ)`);
-      setSmsText('');
-      setShowSmsBox(false);
-    }
-  };
-
   return (
     <section className="w-full max-w-5xl mx-auto px-4 md:px-8 py-2">
-      <div className="card-soft p-4 md:p-5">
+      <div className="card-soft p-3.5 sm:p-4">
         
         {/* Nút bấm nhanh thường dùng */}
-        <div className="flex flex-col gap-2.5 mb-2.5">
+        <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-800">
               Thêm nhanh thường dùng:
@@ -271,176 +194,7 @@ export default function QuickEntry({
               ))
             )}
           </div>
-
-          {/* Hàng 2 nút hành động riêng biệt (không dùng chấm floating, không bị rớt chữ) */}
-          <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setShowSmsBox(!showSmsBox)}
-              className="w-full py-2 px-2.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors tactile-btn shadow-2xs"
-            >
-              <ChatText size={15} className="text-emerald-700 shrink-0" />
-              <span>{showSmsBox ? 'Đóng SMS' : 'Dán SMS ngân hàng'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full py-2 px-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/70 hover:bg-emerald-100/70 text-emerald-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors tactile-btn shadow-2xs"
-            >
-              <PencilSimple size={15} className="text-emerald-700 shrink-0" />
-              <span>{isExpanded ? 'Thu gọn' : 'Nhập chi tiết'}</span>
-              {isExpanded ? <CaretUp size={13} weight="bold" /> : <CaretDown size={13} weight="bold" />}
-            </button>
-          </div>
         </div>
-
-        {/* Hộp dán tin nhắn ngân hàng */}
-        {showSmsBox && (
-          <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-            <label className="block text-xs font-medium text-slate-700">
-              Dán nội dung tin nhắn biến động số dư (Vietcombank, Techcombank, MoMo...):
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={smsText}
-                onChange={(e) => setSmsText(e.target.value)}
-                placeholder="Ví dụ: GD -43,000VND Com trua... hoặc +2,000,000VND phi sua web"
-                className="flex-1 px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500"
-              />
-              <button
-                onClick={handleParseSms}
-                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-medium tactile-btn"
-              >
-                Nhận diện
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Biểu mẫu chi tiết */}
-        {isExpanded && (
-          <form onSubmit={handleSubmit} className="pt-3 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
-            
-            {/* Ngày */}
-            <div className="col-span-1 md:col-span-1">
-              <label className="block text-slate-500 mb-1 font-medium">Ngày</label>
-              <input
-                type="date"
-                required
-                value={formData.ngay}
-                onChange={(e) => setFormData({ ...formData, ngay: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white text-xs font-medium"
-              />
-            </div>
-
-            {/* Giờ */}
-            <div className="col-span-1 md:col-span-1">
-              <label className="block text-slate-500 mb-1 font-medium">Giờ</label>
-              <input
-                type="time"
-                required
-                value={formData.gio}
-                onChange={(e) => setFormData({ ...formData, gio: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white text-xs tabular-nums font-medium"
-              />
-            </div>
-
-            {/* Nội dung */}
-            <div className="col-span-2 md:col-span-2">
-              <label className="block text-slate-500 mb-1 font-medium">Nội dung</label>
-              <input
-                type="text"
-                required
-                placeholder="Ăn sáng, phí sửa web..."
-                value={formData.noi_dung}
-                onChange={(e) => setFormData({ ...formData, noi_dung: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
-              />
-            </div>
-
-            {/* Loại tiền Thu hay Chi */}
-            <div className="col-span-1 md:col-span-1">
-              <label className="block text-slate-500 mb-1 font-medium">Khoản</label>
-              <select
-                value={formData.actionType}
-                onChange={(e) => setFormData({ ...formData, actionType: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white font-medium"
-              >
-                <option value="chi">Khoản Chi (-)</option>
-                <option value="thu">Khoản Thu (+)</option>
-              </select>
-            </div>
-
-            {/* Số tiền */}
-            <div className="col-span-1 md:col-span-1">
-              <label className="block text-slate-500 mb-1 font-medium">Số tiền (đ)</label>
-              <input
-                type="number"
-                required
-                placeholder="43000"
-                value={formData.so_tien}
-                onChange={(e) => setFormData({ ...formData, so_tien: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-semibold focus:outline-none focus:bg-white tabular-nums"
-              />
-            </div>
-
-            {/* Phân loại */}
-            <div className="col-span-1 md:col-span-1">
-              <label className="block text-slate-500 mb-1 font-medium">Phân loại</label>
-              <select
-                value={formData.phan_loai}
-                onChange={(e) => setFormData({ ...formData, phan_loai: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Loại */}
-            <div className="col-span-1 md:col-span-1">
-              <label className="block text-slate-500 mb-1 font-medium">Loại</label>
-              <select
-                value={formData.loai}
-                onChange={(e) => setFormData({ ...formData, loai: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
-              >
-                {macroTypes.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Không gian ví */}
-            <div className="col-span-1 md:col-span-1">
-              <label className="block text-slate-500 mb-1 font-medium">Không gian</label>
-              <select
-                value={formData.vault}
-                onChange={(e) => setFormData({ ...formData, vault: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
-              >
-                <option value="shared">Quỹ chung</option>
-                <option value="personal_nhut">Ví của Nhựt</option>
-                <option value="personal_trang">Ví của Trang</option>
-              </select>
-            </div>
-
-            {/* Nút thêm */}
-            <div className="col-span-1 md:col-span-3 flex items-end">
-              <button
-                type="submit"
-                className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-semibold text-xs tactile-btn flex items-center justify-center gap-1.5 shadow-xs"
-              >
-                <Plus size={15} weight="bold" />
-                Lưu vào sổ
-              </button>
-            </div>
-
-          </form>
-        )}
 
       </div>
 

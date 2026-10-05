@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './components/Header';
 import BudgetPulse from './components/BudgetPulse';
+import CategoryPieChart from './components/CategoryPieChart';
 import QuickEntry from './components/QuickEntry';
 import TransactionList from './components/TransactionList';
 import { 
@@ -536,6 +537,13 @@ export default function App() {
           monthlyConfig={activeMonthlyConfig}
           onOpenMonthManager={() => setIsMonthManagerOpen(true)}
           privacyMode={privacyMode}
+        />
+
+        {/* Biểu đồ tròn cơ cấu chi tiêu & thu nhập theo phân loại */}
+        <CategoryPieChart
+          transactions={currentMonthTransactions}
+          privacyMode={privacyMode}
+          currentMonth={currentMonth}
         />
 
         {/* Khối nhập liệu nhanh gọn */}
