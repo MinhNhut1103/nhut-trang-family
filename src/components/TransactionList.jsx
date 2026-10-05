@@ -32,6 +32,8 @@ import {
   TrendUp
 } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList } from '../data/initialData';
+import TransactionModal from './TransactionModal';
+
 // Hàm lấy icon và màu sắc nhận diện trực quan theo phân loại
 const getCategoryIcon = (category, isThu) => {
   if (isThu) {
