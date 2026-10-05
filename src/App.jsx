@@ -366,6 +366,26 @@ export default function App() {
     localStorage.setItem('nt_family_members', JSON.stringify(secureList));
   }, [members]);
 
+  // Tự động dọn sạch toàn bộ dấu vết mã PIN hoặc hash cũ trong LocalStorage ngay khi tải trang
+  useEffect(() => {
+    try {
+      const rawMem = localStorage.getItem('nt_family_members');
+      if (rawMem && (rawMem.includes('"pin"') || rawMem.includes('"pin_hash"'))) {
+        const parsed = JSON.parse(rawMem);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.map((m) => sanitizeMemberForStorage(m));
+          localStorage.setItem('nt_family_members', JSON.stringify(clean));
+        }
+      }
+      const rawUser = localStorage.getItem('nt_auth_user');
+      if (rawUser && (rawUser.includes('"pin"') || rawUser.includes('"pin_hash"'))) {
+        const parsedU = JSON.parse(rawUser);
+        const cleanU = sanitizeMemberForStorage(parsedU);
+        localStorage.setItem('nt_auth_user', JSON.stringify(cleanU));
+      }
+    } catch (e) {}
+  }, []);
+
   // Thông báo nhẹ
   const showToast = (msg) => {
     setToastMessage(msg);

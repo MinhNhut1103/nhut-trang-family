@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, User, SignIn, Eye, EyeSlash, ShieldCheck } from '@phosphor-icons/react';
 import { verifyPin, sanitizeMemberForStorage } from '../utils/crypto';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 export default function LoginForm({ members, onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -26,25 +27,43 @@ export default function LoginForm({ members, onLoginSuccess }) {
       return;
     }
 
-    // Tìm thành viên trong danh sách
-    const member = members.find(
+    let targetMember = members.find(
       (m) => m.username.toLowerCase() === trimmedUser || m.name.toLowerCase() === trimmedUser
     );
 
-    if (!member) {
+    let storedHash = targetMember?.pin_hash || targetMember?.pin;
+
+    // Xác thực trực tiếp qua Supabase Cloud để đối chiếu chuỗi SHA-256
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: cloudMem } = await supabase
+          .from('family_members')
+          .select('*')
+          .ilike('username', trimmedUser)
+          .single();
+        if (cloudMem) {
+          targetMember = cloudMem;
+          storedHash = cloudMem.pin_hash;
+        }
+      } catch (err) {
+        console.error('Lỗi truy vấn xác thực:', err);
+      }
+    }
+
+    if (!targetMember) {
       setErrorMsg('Tài khoản thành viên không tồn tại trong gia đình');
       return;
     }
 
-    // Kiểm tra mật khẩu hoặc PIN chính xác tuyệt đối qua thuật toán băm bảo mật
-    const isMatch = await verifyPin(trimmedPass, member.pin_hash || member.pin);
+    // Kiểm tra mật khẩu hoặc PIN chính xác tuyệt đối qua thuật toán băm bảo mật SHA-256
+    const isMatch = await verifyPin(trimmedPass, storedHash);
     if (!isMatch) {
       setErrorMsg('Mật khẩu / Mã PIN không chính xác, vui lòng thử lại');
       return;
     }
 
-    // Đăng nhập thành công (loại bỏ mã PIN plain text để bảo mật)
-    const secureMember = sanitizeMemberForStorage(member);
+    // Đăng nhập thành công: loại bỏ 100% mã PIN và hash khỏi session để bảo mật
+    const secureMember = sanitizeMemberForStorage(targetMember);
     onLoginSuccess(secureMember, rememberMe);
   };
 

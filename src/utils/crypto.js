@@ -41,15 +41,11 @@ export async function verifyPin(inputPin, storedHashOrPin) {
 }
 
 // Chuẩn hóa đối tượng thành viên trước khi lưu LocalStorage:
-// TUYỆT ĐỐI KHÔNG LƯU MÃ PIN DẠNG RÕ (PLAIN TEXT), CHỈ LƯU PIN_HASH
+// TUYỆT ĐỐI KHÔNG LƯU MÃ PIN HAY HASH VÀO LOCALSTORAGE
 export function sanitizeMemberForStorage(member) {
   if (!member) return null;
   const clone = { ...member };
-  if (clone.pin) {
-    if (!clone.pin_hash) {
-      clone.pin_hash = clone.pin;
-    }
-    delete clone.pin;
-  }
+  delete clone.pin;
+  delete clone.pin_hash;
   return clone;
 }
