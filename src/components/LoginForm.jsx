@@ -2,27 +2,21 @@ import React, { useState } from 'react';
 import { Lock, User, SignIn, Eye, EyeSlash, ShieldCheck } from '@phosphor-icons/react';
 
 export default function LoginForm({ members, onLoginSuccess }) {
-  const [selectedUsername, setSelectedUsername] = useState(members[0]?.username || 'nhut');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSelectMember = (username) => {
-    setSelectedUsername(username);
-    setPassword('');
-    setErrorMsg('');
-  };
-
   const handleLogin = (e) => {
     e.preventDefault();
     setErrorMsg('');
 
-    const trimmedUser = selectedUsername.trim().toLowerCase();
+    const trimmedUser = username.trim().toLowerCase();
     const trimmedPass = password.trim();
 
     if (!trimmedUser) {
-      setErrorMsg('Vui lòng chọn hoặc nhập tên tài khoản');
+      setErrorMsg('Vui lòng nhập tên tài khoản');
       return;
     }
 
@@ -68,62 +62,26 @@ export default function LoginForm({ members, onLoginSuccess }) {
           </p>
         </div>
 
-        {/* Khối Form Đăng nhập duy nhất */}
+        {/* Khối Form Đăng nhập */}
         <div className="card-soft p-6 md:p-8 bg-white border border-slate-200/90 shadow-sm">
           
           <form onSubmit={handleLogin} className="space-y-4">
             
-            {/* 1. Chọn nhanh tài khoản thành viên */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-2">
-                Chọn thành viên đăng nhập:
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {members.map((m) => {
-                  const isSelected = selectedUsername === m.username;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => handleSelectMember(m.username)}
-                      className={`p-3 rounded-xl border text-left transition-all tactile-btn flex items-center gap-2.5 ${
-                        isSelected
-                          ? 'border-emerald-600 bg-emerald-50/70 text-emerald-900 shadow-2xs'
-                          : 'border-slate-200 hover:border-slate-300 bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                        m.color === 'pink' 
-                          ? 'bg-pink-100 text-pink-700' 
-                          : 'bg-emerald-100 text-emerald-800'
-                      }`}>
-                        {m.name.charAt(0)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-xs truncate">{m.name}</div>
-                        <div className="text-[10px] text-slate-500 truncate">{m.role || 'Thành viên'}</div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Hoặc nhập tên tài khoản */}
+            {/* Nhập tên tài khoản */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tài khoản (Username)
+                Tài khoản
               </label>
               <div className="relative">
                 <input
                   type="text"
                   required
-                  value={selectedUsername}
+                  value={username}
                   onChange={(e) => {
-                    setSelectedUsername(e.target.value);
+                    setUsername(e.target.value);
                     setErrorMsg('');
                   }}
-                  placeholder="nhut hoặc trang..."
+                  placeholder="Nhập tên tài khoản (nhut, trang...)"
                   className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-600 font-medium"
                 />
                 <User size={16} className="absolute left-3 top-3 text-slate-400" />
