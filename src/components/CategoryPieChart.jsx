@@ -93,10 +93,10 @@ export default function CategoryPieChart({
     if (totalAmount <= 0 || dataList.length === 0) return [];
 
     let currentAngle = -Math.PI / 2; // Bắt đầu ở đỉnh 12h
-    const size = 200;
-    const center = size / 2;
-    const outerRadius = 85;
-    const innerRadius = 55;
+    const size = 240;
+    const center = size / 2; // 120
+    const outerRadius = 110;
+    const innerRadius = 78; // Lỗ trong rộng rãi (đường kính 156px), chữ hoàn toàn không bị chạm hay che
 
     // Nếu chỉ có đúng 1 danh mục chiếm 100%
     if (dataList.length === 1) {
@@ -222,10 +222,10 @@ export default function CategoryPieChart({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 
-                {/* CỘT 1: BIỂU ĐỒ TRÒN DONUT CHART (DESKTOP: 5 CỘT, MOBILE: TẬP TRUNG GIỮA) */}
-                <div className="md:col-span-5 flex flex-col items-center justify-center">
-                  <div className="relative w-52 h-52 sm:w-56 sm:h-56">
-                    <svg viewBox="0 0 200 200" className="w-full h-full transform -rotate-90">
+                {/* CỘT 1: BIỂU ĐỒ TRÒN DONUT CHART (TO HƠN, RỘNG RÃI, KHÔNG BỊ CHE CHỮ) */}
+                <div className="md:col-span-5 flex flex-col items-center justify-center py-1">
+                  <div className="relative w-64 h-64 sm:w-72 sm:h-72">
+                    <svg viewBox="0 0 240 240" className="w-full h-full transform -rotate-90">
                       {chartSlices.map((slice, idx) => {
                         const isHovered = hoveredCategory === slice.name;
                         
@@ -255,7 +255,7 @@ export default function CategoryPieChart({
                               hoveredCategory && !isHovered ? 'opacity-40' : 'opacity-100'
                             } ${isHovered ? 'brightness-110 drop-shadow-md' : 'hover:opacity-90'}`}
                             stroke="#ffffff"
-                            strokeWidth="2"
+                            strokeWidth="2.5"
                             onMouseEnter={() => setHoveredCategory(slice.name)}
                             onMouseLeave={() => setHoveredCategory(null)}
                             onClick={() => setHoveredCategory(hoveredCategory === slice.name ? null : slice.name)}
@@ -264,37 +264,37 @@ export default function CategoryPieChart({
                       })}
                     </svg>
 
-                    {/* VÙNG THÔNG TIN TRUNG TÂM DONUT */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
+                    {/* VÙNG THÔNG TIN TRUNG TÂM DONUT (RỘNG RÃI, CÂN ĐỐI, KHÔNG BỊ CHE) */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-2">
                       {activeItem ? (
-                        <>
-                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate max-w-[120px]">
+                        <div className="flex flex-col items-center justify-center max-w-[145px] sm:max-w-[165px] space-y-0.5">
+                          <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate w-full px-1">
                             {activeItem.name}
                           </span>
-                          <span className="text-base sm:text-lg font-extrabold text-slate-900 tabular-nums">
+                          <span className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums leading-tight">
                             {activeItem.percent.toFixed(1)}%
                           </span>
-                          <span className="text-xs font-bold text-slate-700 tabular-nums">
+                          <span className="text-xs sm:text-sm font-extrabold text-slate-800 tabular-nums">
                             {formatMoney(activeItem.amount)}
                           </span>
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">
                             {activeItem.count} giao dịch
                           </span>
-                        </>
+                        </div>
                       ) : (
-                        <>
-                          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                        <div className="flex flex-col items-center justify-center max-w-[145px] sm:max-w-[165px] space-y-0.5">
+                          <span className="text-[11px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
                             Tổng {viewType === 'chi' ? 'Chi' : 'Thu'}
                           </span>
-                          <span className={`text-sm sm:text-base font-extrabold tabular-nums ${
+                          <span className={`text-base sm:text-lg font-black tabular-nums tracking-tight ${
                             viewType === 'chi' ? 'text-rose-600' : 'text-emerald-700'
                           }`}>
                             {formatMoney(totalAmount)}
                           </span>
-                          <span className="text-[10px] text-slate-400 mt-0.5">
-                            Rê chuột để xem chi tiết
+                          <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium pt-0.5">
+                            Rê chuột để xem
                           </span>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -307,7 +307,7 @@ export default function CategoryPieChart({
                     <span>TỶ TRỌNG & SỐ TIỀN</span>
                   </div>
 
-                  <div className="max-h-64 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
+                  <div className="max-h-72 sm:max-h-80 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
                     {dataList.map((item) => {
                       const isHovered = hoveredCategory === item.name;
 
