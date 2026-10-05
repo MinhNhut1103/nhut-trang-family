@@ -151,7 +151,7 @@ export default function CategoryPieChart({
     : null;
 
   return (
-    <section className="w-full max-w-5xl mx-auto px-4 md:px-8 py-2">
+    <section className="w-full max-w-5xl mx-auto px-4 md:px-8">
       <div className="card-soft p-4 md:p-5 border border-slate-200/90 shadow-2xs">
         
         {/* TIÊU ĐỀ & CHỌN LOẠI THU / CHI */}

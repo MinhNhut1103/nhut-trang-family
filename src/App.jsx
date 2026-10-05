@@ -515,20 +515,20 @@ export default function App() {
         onAddMonth={handleAddMonth}
       />
 
-      {/* Nội dung chính */}
-      <main>
-        {/* Đầu trang */}
-        <Header
-          activeUser={activeUser}
-          setActiveUser={setActiveUser}
-          privacyMode={privacyMode}
-          setPrivacyMode={setPrivacyMode}
-          members={members}
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          onOpenMemberManager={() => setIsMemberManagerOpen(true)}
-        />
+      {/* Đầu trang (Thanh điều hướng dính) */}
+      <Header
+        activeUser={activeUser}
+        setActiveUser={setActiveUser}
+        privacyMode={privacyMode}
+        setPrivacyMode={setPrivacyMode}
+        members={members}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenMemberManager={() => setIsMemberManagerOpen(true)}
+      />
 
+      {/* Nội dung chính: Khoảng trắng giữa tất cả các phần đều tăm tắp (space-y-3) */}
+      <main className="space-y-3 pt-3">
         {/* Tổng quan tháng & ghi chú riêng của tháng */}
         <BudgetPulse
           transactions={currentMonthTransactions}

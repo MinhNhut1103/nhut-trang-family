@@ -54,10 +54,10 @@ export default function BudgetPulse({
   const monthFocus = monthlyConfig?.banner_focus?.trim();
 
   return (
-    <section className="w-full max-w-5xl mx-auto px-4 md:px-8 pt-4 pb-2">
+    <section className="w-full max-w-5xl mx-auto px-4 md:px-8 space-y-3">
       
       {/* 1. THANH CHUYỂN THÁNG & QUẢN LÝ THÁNG (RESPONSIVE DESKTOP & MOBILE) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         {/* Bộ chuyển tháng: 100% trên mobile, gọn gàng trên desktop */}
         <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-1 bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs">
           <button
@@ -108,7 +108,7 @@ export default function BudgetPulse({
       </div>
 
       {/* 2A. BẢN DESKTOP (>= SM): GIỮ NGUYÊN 3 CỘT RỘNG RÃI SANG TRỌNG */}
-      <div className="hidden sm:grid sm:grid-cols-3 sm:gap-3 mb-3">
+      <div className="hidden sm:grid sm:grid-cols-3 sm:gap-3">
         {/* Thu */}
         <div className="card-soft p-3.5 md:p-4 text-center">
           <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
@@ -143,7 +143,7 @@ export default function BudgetPulse({
       </div>
 
       {/* 2B. BẢN MOBILE (< SM): DẠNG HÀNG 100% TỪNG DÒNG, KHÔNG BỊ BÓP NGHẸT */}
-      <div className="block sm:hidden card-soft overflow-hidden mb-3 divide-y divide-slate-100 shadow-2xs border border-slate-200/90">
+      <div className="block sm:hidden card-soft overflow-hidden divide-y divide-slate-100 shadow-2xs border border-slate-200/90">
         
         {/* HÀNG 1: TỔNG THU (100% WIDTH) */}
         <div className="flex items-center justify-between p-3 bg-white hover:bg-slate-50/60 transition-colors">
@@ -210,7 +210,7 @@ export default function BudgetPulse({
       </div>
 
       {/* 3. KHỐI HIỂN THỊ GHI CHÚ RIÊNG CỦA THÁNG (NOTE CARD SANG TRỌNG) */}
-      <div className="card-soft p-3.5 sm:p-4 mb-3 bg-gradient-to-br from-emerald-50/50 via-white to-slate-50/60 border border-emerald-100/90 shadow-2xs">
+      <div className="card-soft p-3.5 sm:p-4 bg-gradient-to-br from-emerald-50/50 via-white to-slate-50/60 border border-emerald-100/90 shadow-2xs">
         
         {/* Header ghi chú */}
         <div className="flex items-center justify-between gap-2 mb-2.5">

@@ -135,7 +135,7 @@ export default function QuickEntry({
   };
 
   return (
-    <section className="w-full max-w-5xl mx-auto px-4 md:px-8 py-2">
+    <section className="w-full max-w-5xl mx-auto px-4 md:px-8">
       <div className="card-soft p-3.5 sm:p-4">
         
         {/* Nút bấm nhanh thường dùng */}
