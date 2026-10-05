@@ -391,7 +391,7 @@ export default function TransactionList({
               title="Thêm khoản thu chi mới vào sổ"
             >
               <Plus size={18} weight="bold" />
-              <span>+ Thêm thu chi mới</span>
+              <span>Thêm thu chi mới</span>
             </button>
           </div>
 
