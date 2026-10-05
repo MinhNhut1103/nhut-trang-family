@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL);
+const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY);
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && 
@@ -38,16 +38,45 @@ export async function getTransactions() {
 
 export async function addTransaction(transaction) {
   if (!supabase) return null;
-  const { data, error } = await supabase
+
+  // Sanitize payload chỉ gửi các cột chuẩn
+  const payload = {
+    id: transaction.id || ('tx-' + Date.now()),
+    ngay: transaction.ngay,
+    noi_dung: transaction.noi_dung,
+    thu: Number(transaction.thu) || 0,
+    chi: Number(transaction.chi) || 0,
+    phan_loai: transaction.phan_loai || 'ăn uống',
+    loai: transaction.loai || 'thiết yếu',
+    vault: transaction.vault || 'shared',
+    author: transaction.author || 'Nhựt',
+    ghi_chu: transaction.ghi_chu || ''
+  };
+  if (transaction.gio) {
+    payload.gio = transaction.gio;
+  }
+
+  let { data, error } = await supabase
     .from('transactions')
-    .insert([transaction])
+    .insert([payload])
     .select();
   
+  // Nếu database chưa kịp có cột gio, tự động bỏ gio và thử lại ngay lập tức
+  if (error && (error.code === 'PGRST204' || error.message?.includes("'gio'"))) {
+    delete payload.gio;
+    const retry = await supabase
+      .from('transactions')
+      .insert([payload])
+      .select();
+    data = retry.data;
+    error = retry.error;
+  }
+
   if (error) {
-    console.error('Error inserting transaction:', error);
+    console.error('Error inserting transaction to Supabase:', error);
     throw error;
   }
-  return data[0];
+  return data ? data[0] : null;
 }
 
 export async function deleteTransaction(id) {
@@ -58,7 +87,7 @@ export async function deleteTransaction(id) {
     .eq('id', id);
   
   if (error) {
-    console.error('Error deleting transaction:', error);
+    console.error('Error deleting transaction from Supabase:', error);
     throw error;
   }
   return true;
@@ -66,17 +95,41 @@ export async function deleteTransaction(id) {
 
 export async function updateTransaction(id, updates) {
   if (!supabase) return null;
-  const { data, error } = await supabase
+
+  const payload = {};
+  const allowed = ['ngay', 'noi_dung', 'thu', 'chi', 'phan_loai', 'loai', 'vault', 'author', 'ghi_chu', 'gio'];
+  allowed.forEach((k) => {
+    if (updates[k] !== undefined) {
+      payload[k] = updates[k];
+    }
+  });
+
+  if (payload.thu !== undefined) payload.thu = Number(payload.thu) || 0;
+  if (payload.chi !== undefined) payload.chi = Number(payload.chi) || 0;
+
+  let { data, error } = await supabase
     .from('transactions')
-    .update(updates)
+    .update(payload)
     .eq('id', id)
     .select();
   
+  // Fallback nếu database chưa có cột gio
+  if (error && (error.code === 'PGRST204' || error.message?.includes("'gio'"))) {
+    delete payload.gio;
+    const retry = await supabase
+      .from('transactions')
+      .update(payload)
+      .eq('id', id)
+      .select();
+    data = retry.data;
+    error = retry.error;
+  }
+
   if (error) {
-    console.error('Error updating transaction:', error);
+    console.error('Error updating transaction in Supabase:', error);
     throw error;
   }
-  return data[0];
+  return data ? data[0] : null;
 }
 
 export async function getMonthlyConfig(monthId = '2026-10') {

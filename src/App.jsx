@@ -579,8 +579,10 @@ export default function App() {
     if (isSupabaseConfigured) {
       try {
         await addTransaction(newTx);
+        showToast('Đã ghi vào sổ & lưu lên Supabase');
       } catch (err) {
         console.error('Lỗi lưu Supabase:', err);
+        showToast('⚠️ Không thể lưu lên Supabase: ' + (err.message || 'Lỗi'));
       }
     }
   };
@@ -595,6 +597,7 @@ export default function App() {
         await deleteTransaction(id);
       } catch (err) {
         console.error('Lỗi xóa Supabase:', err);
+        showToast('⚠️ Lỗi xóa trên Supabase: ' + (err.message || 'Lỗi'));
       }
     }
   };
@@ -613,6 +616,7 @@ export default function App() {
         await updateTransaction(id, updates);
       } catch (err) {
         console.error('Lỗi cập nhật Supabase:', err);
+        showToast('⚠️ Lỗi cập nhật Supabase: ' + (err.message || 'Lỗi'));
       }
     }
   };
