@@ -81,7 +81,7 @@ export default function LoginForm({ members, onLoginSuccess }) {
                     setUsername(e.target.value);
                     setErrorMsg('');
                   }}
-                  placeholder="Nhập tên tài khoản (nhut, trang...)"
+                  placeholder="Nhập tên tài khoản..."
                   className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-600 font-medium"
                 />
                 <User size={16} className="absolute left-3 top-3 text-slate-400" />
