@@ -407,14 +407,14 @@ export default function TransactionList({
             )}
           </div>
 
-          {/* HÀNG BỘ LỌC CHI TIẾT: CÁC HÀNG 100% RÕ RÀNG, DỄ BẤM TRÊN MOBILE */}
-          <div className="w-full space-y-2 pt-1">
+          {/* HÀNG BỘ LỌC CHI TIẾT: CHIA 2 HÀNG MỖI HÀNG 2 CỘT */}
+          <div className="w-full grid grid-cols-2 gap-2 pt-1">
             
-            {/* Lọc theo Tháng (100% width) */}
-            <div className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
-              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold shrink-0">
-                <Calendar size={16} className="text-emerald-700" weight="bold" />
-                <span>Tháng:</span>
+            {/* Hàng 1 - Cột 1: Lọc theo Tháng */}
+            <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-2.5 sm:px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
+              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold shrink-0">
+                <Calendar size={15} className="text-emerald-700 shrink-0" weight="bold" />
+                <span className="hidden xs:inline sm:inline">Tháng:</span>
               </div>
               <select
                 value={filterMonth}
@@ -427,12 +427,12 @@ export default function TransactionList({
                     }
                   }
                 }}
-                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-2 truncate"
+                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-1.5 truncate"
               >
                 <option value="current">
                   {currentMonth?.includes('-') ? `Tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth} (Đang xem)
                 </option>
-                <option value="all">Tất cả các tháng ({transactions.length} khoản)</option>
+                <option value="all">Tất cả ({transactions.length} khoản)</option>
                 {availableMonths
                   .filter(m => m !== currentMonth)
                   .map(m => {
@@ -447,19 +447,19 @@ export default function TransactionList({
               </select>
             </div>
 
-            {/* Lọc theo Ngày (100% width) - Gọn đẹp, không bị lỗi hiển thị d📅 */}
-            <div className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
-              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold shrink-0">
-                <Clock size={16} className="text-emerald-700" weight="bold" />
-                <span>Ngày:</span>
+            {/* Hàng 1 - Cột 2: Lọc theo Ngày */}
+            <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-2.5 sm:px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
+              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold shrink-0">
+                <Clock size={15} className="text-emerald-700 shrink-0" weight="bold" />
+                <span className="hidden xs:inline sm:inline">Ngày:</span>
               </div>
-              <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+              <div className="flex items-center gap-1 flex-1 justify-end min-w-0">
                 <select
                   value={filterDate}
                   onChange={(e) => setFilterDate(e.target.value)}
-                  className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-2 truncate"
+                  className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-1.5 truncate"
                 >
-                  <option value="">Tất cả các ngày trong tháng</option>
+                  <option value="">Tất cả các ngày</option>
                   {availableDaysInScope.map((d) => (
                     <option key={d.iso} value={d.iso}>
                       {d.label} ({d.count} khoản)
@@ -473,42 +473,42 @@ export default function TransactionList({
                     className="text-slate-400 hover:text-rose-600 p-0.5 rounded-full shrink-0"
                     title="Bỏ chọn ngày"
                   >
-                    <X size={14} weight="bold" />
+                    <X size={13} weight="bold" />
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Lọc theo Phân loại (100% width) */}
-            <div className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
-              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold shrink-0">
-                <Funnel size={16} className="text-emerald-700" weight="bold" />
-                <span>Phân loại:</span>
+            {/* Hàng 2 - Cột 1: Lọc theo Phân loại */}
+            <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-2.5 sm:px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
+              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold shrink-0">
+                <Funnel size={15} className="text-emerald-700 shrink-0" weight="bold" />
+                <span className="hidden xs:inline sm:inline">Phân loại:</span>
               </div>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-2 truncate"
+                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-1.5 truncate"
               >
-                <option value="all">Tất cả phân loại ({categories.length})</option>
+                <option value="all">Tất cả ({categories.length})</option>
                 {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
             </div>
 
-            {/* Lọc theo Loại (100% width) */}
-            <div className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
-              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold shrink-0">
-                <SlidersHorizontal size={16} className="text-emerald-700" weight="bold" />
-                <span>Loại:</span>
+            {/* Hàng 2 - Cột 2: Lọc theo Loại */}
+            <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-2.5 sm:px-3 py-2 shadow-2xs hover:border-emerald-500/40 transition-colors">
+              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold shrink-0">
+                <SlidersHorizontal size={15} className="text-emerald-700 shrink-0" weight="bold" />
+                <span className="hidden xs:inline sm:inline">Loại:</span>
               </div>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-2 truncate"
+                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-1.5 truncate"
               >
-                <option value="all">Tất cả loại ({macroTypes.length})</option>
+                <option value="all">Tất cả ({macroTypes.length})</option>
                 {macroTypes.map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
