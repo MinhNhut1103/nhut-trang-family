@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Calendar, Note, Plus, Target, CurrencyDollar, ArrowRight, Money, CreditCard } from '@phosphor-icons/react';
+import { X, Check, Calendar, Note, Plus, Target, CurrencyDollar, ArrowRight, Wallet } from '@phosphor-icons/react';
 
 export default function MonthManagerModal({
   isOpen,
@@ -10,7 +10,7 @@ export default function MonthManagerModal({
   onSaveMonthlyConfig,
   availableMonths = [],
   onAddMonth,
-  currentFunds = { tien_ngoai_vi: 0, tien_trong_the: 0 }
+  currentFunds = { so_tien_hien_co: 0 }
 }) {
   const [activeTabMonth, setActiveTabMonth] = useState(currentMonth);
   const [newMonthInput, setNewMonthInput] = useState('');
@@ -21,8 +21,7 @@ export default function MonthManagerModal({
     ghi_chu: '',
     banner_focus: '',
     han_muc_chi: 30000000,
-    tien_ngoai_vi: 0,
-    tien_trong_the: 0
+    so_tien_hien_co: 0
   });
 
   // Hỗ trợ phím Esc để đóng modal
@@ -46,12 +45,15 @@ export default function MonthManagerModal({
   useEffect(() => {
     if (!isOpen) return;
     const config = monthlyConfigs[activeTabMonth] || {};
+    const fundsVal = currentFunds?.so_tien_hien_co !== undefined 
+      ? Number(currentFunds.so_tien_hien_co) 
+      : (((Number(currentFunds?.tien_ngoai_vi) || 0) + (Number(currentFunds?.tien_trong_the) || 0)) || ((Number(config.tien_ngoai_vi) || 0) + (Number(config.tien_trong_the) || 0)));
+
     setFormData({
       ghi_chu: config.ghi_chu || '',
       banner_focus: config.banner_focus || '',
       han_muc_chi: config.han_muc_chi || 30000000,
-      tien_ngoai_vi: currentFunds?.tien_ngoai_vi ?? (config.tien_ngoai_vi || 0),
-      tien_trong_the: currentFunds?.tien_trong_the ?? (config.tien_trong_the || 0)
+      so_tien_hien_co: fundsVal
     });
   }, [isOpen, activeTabMonth, monthlyConfigs, currentFunds]);
 
@@ -71,8 +73,9 @@ export default function MonthManagerModal({
       ghi_chu: formData.ghi_chu.trim(),
       banner_focus: formData.banner_focus.trim(),
       han_muc_chi: Number(formData.han_muc_chi) || 30000000,
-      tien_ngoai_vi: Number(formData.tien_ngoai_vi) || 0,
-      tien_trong_the: Number(formData.tien_trong_the) || 0
+      so_tien_hien_co: Number(formData.so_tien_hien_co) || 0,
+      tien_ngoai_vi: Number(formData.so_tien_hien_co) || 0,
+      tien_trong_the: 0
     });
     onClose();
   };
@@ -234,49 +237,25 @@ export default function MonthManagerModal({
             />
           </div>
 
-          {/* 3. Số tiền hiện có (Tiền ngoài ví & Tiền trong thẻ) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            {/* Tiền ngoài ví */}
-            <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-200/80">
-              <label className="block text-amber-900 font-semibold mb-1 flex items-center gap-1.5">
-                <Money size={15} className="text-amber-700" weight="bold" />
-                <span>Tiền ngoài ví (Tiền mặt):</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={formData.tien_ngoai_vi || ''}
-                  onChange={(e) => setFormData({ ...formData, tien_ngoai_vi: e.target.value })}
-                  className="w-full py-2 pl-3 pr-8 bg-white border border-amber-300 rounded-xl text-amber-950 font-bold focus:outline-none focus:border-amber-500 tabular-nums text-xs"
-                />
-                <span className="absolute right-3 top-2 text-xs text-amber-600 font-semibold">đ</span>
-              </div>
-              <p className="text-[10px] text-amber-700/80 mt-1">
-                Tiền mặt khả dụng hiện có trong ví.
-              </p>
+          {/* 3. Số tiền hiện có */}
+          <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-200/80">
+            <label className="block text-emerald-950 font-semibold mb-1 flex items-center gap-1.5">
+              <Wallet size={16} className="text-emerald-700" weight="bold" />
+              <span>Số tiền hiện có (Tài sản khả dụng):</span>
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0"
+                value={formData.so_tien_hien_co || ''}
+                onChange={(e) => setFormData({ ...formData, so_tien_hien_co: e.target.value })}
+                className="w-full py-2 pl-3 pr-8 bg-white border border-emerald-300 rounded-xl text-emerald-950 font-bold focus:outline-none focus:border-emerald-500 tabular-nums text-sm"
+              />
+              <span className="absolute right-3 top-2 text-xs text-emerald-700 font-semibold">đ</span>
             </div>
-
-            {/* Tiền trong thẻ */}
-            <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-200/80">
-              <label className="block text-blue-900 font-semibold mb-1 flex items-center gap-1.5">
-                <CreditCard size={15} className="text-blue-700" weight="bold" />
-                <span>Tiền trong thẻ (Ngân hàng):</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={formData.tien_trong_the || ''}
-                  onChange={(e) => setFormData({ ...formData, tien_trong_the: e.target.value })}
-                  className="w-full py-2 pl-3 pr-8 bg-white border border-blue-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-blue-500 tabular-nums text-xs"
-                />
-                <span className="absolute right-3 top-2 text-xs text-blue-600 font-semibold">đ</span>
-              </div>
-              <p className="text-[10px] text-blue-700/80 mt-1">
-                Số dư tài khoản ngân hàng / thẻ ATM hiện có.
-              </p>
-            </div>
+            <p className="text-[11px] text-emerald-800/80 mt-1.5">
+              Tổng số tiền khả dụng hiện có. Số tiền này sẽ tự động cộng khi Thu và trừ khi Chi hàng tháng.
+            </p>
           </div>
 
           {/* Nút lưu */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Calendar, Plus, PencilSimple, ArrowDown, ArrowUp, Money, CreditCard } from '@phosphor-icons/react';
+import { X, Check, Calendar, Plus, PencilSimple, ArrowDown, ArrowUp } from '@phosphor-icons/react';
 import { getCurrentTime } from '../data/initialData';
 
 export default function TransactionModal({
@@ -34,7 +34,6 @@ export default function TransactionModal({
     phan_loai: categories[0] || 'ăn uống',
     loai: macroTypes[0] || 'thiết yếu',
     vault: 'shared',
-    wallet_source: 'card', // 'cash' | 'card'
     author: 'Nhựt',
     ghi_chu: ''
   });
@@ -46,7 +45,6 @@ export default function TransactionModal({
     if (transactionToEdit) {
       const isThu = (Number(transactionToEdit.thu) || 0) > 0;
       const amount = isThu ? transactionToEdit.thu : (transactionToEdit.chi || 0);
-      const isCash = transactionToEdit.wallet_source === 'cash' || transactionToEdit.ghi_chu?.includes('[Tiền mặt]');
       const cleanNote = (transactionToEdit.ghi_chu || '').replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim();
 
       setFormData({
@@ -58,7 +56,6 @@ export default function TransactionModal({
         phan_loai: transactionToEdit.phan_loai || (categories[0] || 'ăn uống'),
         loai: transactionToEdit.loai || (macroTypes[0] || 'thiết yếu'),
         vault: transactionToEdit.vault || 'shared',
-        wallet_source: isCash ? 'cash' : 'card',
         author: transactionToEdit.author || (activeUser === 'nhut' ? 'Nhựt' : 'Trang'),
         ghi_chu: cleanNote
       });
@@ -73,7 +70,6 @@ export default function TransactionModal({
         phan_loai: categories[0] || 'ăn uống',
         loai: macroTypes[0] || 'thiết yếu',
         vault: 'shared',
-        wallet_source: 'card',
         author: currentMember ? currentMember.name : (activeUser === 'nhut' ? 'Nhựt' : 'Trang'),
         ghi_chu: ''
       });
@@ -119,7 +115,6 @@ export default function TransactionModal({
       phan_loai: formData.phan_loai,
       loai: formData.loai,
       vault: formData.vault,
-      wallet_source: formData.wallet_source || 'card',
       author: formData.author,
       ghi_chu: formData.ghi_chu.trim()
     };
@@ -205,44 +200,6 @@ export default function TransactionModal({
               >
                 <ArrowUp size={14} weight="bold" />
                 <span>Khoản Thu (+)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 2. CHỌN NGUỒN TIỀN (VÍ TIỀN MẶT HOẶC THẺ NGÂN HÀNG) */}
-          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/90">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                Nguồn tiền thực tế:
-              </label>
-              <span className="text-[10px] text-slate-400 font-medium">
-                {formData.actionType === 'chi' ? 'Trừ trực tiếp số tiền hiện có' : 'Cộng trực tiếp số tiền hiện có'}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, wallet_source: 'cash' })}
-                className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer ${
-                  formData.wallet_source === 'cash'
-                    ? 'bg-amber-100/90 border-amber-300 text-amber-950 font-bold shadow-2xs'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-amber-50/50'
-                }`}
-              >
-                <Money size={15} weight="bold" className="text-amber-700" />
-                <span>Tiền ngoài ví (Tiền mặt)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, wallet_source: 'card' })}
-                className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer ${
-                  formData.wallet_source === 'card'
-                    ? 'bg-blue-100/90 border-blue-300 text-blue-950 font-bold shadow-2xs'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-blue-50/50'
-                }`}
-              >
-                <CreditCard size={15} weight="bold" className="text-blue-700" />
-                <span>Tiền trong thẻ (Ngân hàng)</span>
               </button>
             </div>
           </div>

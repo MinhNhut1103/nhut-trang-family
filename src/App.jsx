@@ -15,7 +15,6 @@ import {
   augustTransactions,
   categoriesList,
   macroTypesList,
-  getRandomTime,
   initialMembers,
   initialGoals,
   sortTransactionsByDateDesc,
@@ -37,7 +36,11 @@ import {
   deleteFamilyMember,
   syncAllLocalToSupabase,
   getGlobalWallets,
-  upsertGlobalWallets
+  upsertGlobalWallets,
+  getAppCategories,
+  upsertAppCategories,
+  subscribeToTransactions,
+  subscribeToMonthlyConfig
 } from './supabaseClient';
 import CategoryManagerModal from './components/CategoryManagerModal';
 import MemberManagerModal from './components/MemberManagerModal';
@@ -48,11 +51,58 @@ import LoginForm from './components/LoginForm';
 import { Check } from '@phosphor-icons/react';
 import { sanitizeMemberForStorage } from './utils/crypto';
 
+// Đảm bảo mỗi giao dịch luôn có giờ cố định, tuyệt đối không dùng Math.random() để tránh bị nhảy xáo trộn khi F5
+const getDeterministicTime = (tx, index = 0) => {
+  if (tx?.gio && typeof tx.gio === 'string' && tx.gio.trim().length > 0) {
+    return tx.gio.trim();
+  }
+  if (tx?.created_at) {
+    try {
+      const d = new Date(tx.created_at);
+      if (!isNaN(d.getTime())) {
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+      }
+    } catch (e) {}
+  }
+  const str = String(tx?.id || index);
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) & 0xffffffff;
+  }
+  const h = String(8 + (Math.abs(hash) % 13)).padStart(2, '0');
+  const m = String((Math.abs(hash) * 7) % 60).padStart(2, '0');
+  return `${h}:${m}`;
+};
+
 export default function App() {
+  // Trạng thái tài khoản đang đăng nhập (chỉ lưu trong sessionStorage để duy trì phiên của tab đang mở)
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('nt_auth_user');
+      if (saved) {
+        return sanitizeMemberForStorage(JSON.parse(saved));
+      }
+    } catch (e) {}
+    return null;
+  });
+
   // 1. Trạng thái người dùng và không gian
   const [activeUser, setActiveUser] = useState(() => {
-    return initialProfile.activeUser;
+    try {
+      const savedAuth = sessionStorage.getItem('nt_auth_user');
+      if (savedAuth) {
+        const u = JSON.parse(savedAuth);
+        if (u && u.username) return u.username;
+      }
+    } catch (e) {}
+    return initialProfile.activeUser || 'nhut';
   });
+
+  const handleSelectActiveUser = (username) => {
+    setActiveUser(username);
+  };
 
   const [activeVault, setActiveVault] = useState(() => {
     return 'all'; // mặc định xem tất cả
@@ -60,25 +110,12 @@ export default function App() {
 
   const [privacyMode, setPrivacyMode] = useState(false);
 
-  // SỐ TIỀN HIỆN CÓ: Tiền ngoài ví (tiền mặt) & Tiền trong thẻ (ngân hàng)
-  // Khởi tạo ngay lập tức từ localStorage để F5 không bao giờ bị nhảy về 0
-  const [currentFunds, setCurrentFunds] = useState(() => {
-    try {
-      const saved = localStorage.getItem('nt_current_funds');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && (parsed.tien_ngoai_vi !== undefined || parsed.tien_trong_the !== undefined)) {
-          return {
-            tien_ngoai_vi: Number(parsed.tien_ngoai_vi) || 0,
-            tien_trong_the: Number(parsed.tien_trong_the) || 0
-          };
-        }
-      }
-    } catch (e) {}
-    return {
-      tien_ngoai_vi: 0,
-      tien_trong_the: 0
-    };
+  // Trạng thái tải dữ liệu trực tiếp từ Supabase Cloud
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // SỐ TIỀN HIỆN CÓ: Tải và lưu trực tiếp trên Supabase Cloud
+  const [currentFunds, setCurrentFunds] = useState({
+    so_tien_hien_co: 0
   });
 
   // Lấy tháng hiện tại thực tế theo lịch (YYYY-MM)
@@ -89,64 +126,43 @@ export default function App() {
     return `${y}-${m}`;
   };
 
-  // Quản lý tháng đang xem: Cứ F5 hoặc refresh tải lại trang sẽ luôn về tháng hiện tại
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    return getSystemCurrentMonth();
-  });
+  // Quản lý tháng đang xem
+  const [currentMonth, setCurrentMonth] = useState(getSystemCurrentMonth());
 
-  const [monthlyConfigs, setMonthlyConfigs] = useState(() => {
-    return {
-      '2026-10': {
-        id: '2026-10',
-        banner_focus: initialMonthlyConfig.banner_focus || 'Tối ưu chi tiêu & tiết kiệm',
-        han_muc_chi: initialMonthlyConfig.han_muc_chi || 30000000,
-        ghi_chu: 'Tháng 10/2026: Ưu tiên tiết kiệm chuẩn bị cho các kế hoạch cuối năm, rà soát hóa đơn điện nước định kỳ.'
-      },
-      '2026-09': {
-        id: '2026-09',
-        banner_focus: initialSeptemberConfig.banner_focus,
-        han_muc_chi: initialSeptemberConfig.han_muc_chi,
-        ghi_chu: initialSeptemberConfig.ghi_chu
-      },
-      '2026-08': {
-        id: '2026-08',
-        banner_focus: initialAugustConfig.banner_focus,
-        han_muc_chi: initialAugustConfig.han_muc_chi,
-        ghi_chu: initialAugustConfig.ghi_chu
-      }
-    };
+  const [monthlyConfigs, setMonthlyConfigs] = useState({
+    '2026-10': {
+      id: '2026-10',
+      banner_focus: initialMonthlyConfig.banner_focus || 'Tối ưu chi tiêu & tiết kiệm',
+      han_muc_chi: initialMonthlyConfig.han_muc_chi || 30000000,
+      ghi_chu: 'Tháng 10/2026: Ưu tiên tiết kiệm chuẩn bị cho các kế hoạch cuối năm, rà soát hóa đơn điện nước định kỳ.'
+    },
+    '2026-09': {
+      id: '2026-09',
+      banner_focus: initialSeptemberConfig.banner_focus,
+      han_muc_chi: initialSeptemberConfig.han_muc_chi,
+      ghi_chu: initialSeptemberConfig.ghi_chu
+    },
+    '2026-08': {
+      id: '2026-08',
+      banner_focus: initialAugustConfig.banner_focus,
+      han_muc_chi: initialAugustConfig.han_muc_chi,
+      ghi_chu: initialAugustConfig.ghi_chu
+    }
   });
 
   const [isMonthManagerOpen, setIsMonthManagerOpen] = useState(false);
 
-  const [transactions, setTransactions] = useState(() => {
-    return sortTransactionsByDateDesc(initialTransactions);
-  });
+  // Danh sách giao dịch: Lưu và đọc trực tiếp từ Supabase
+  const [transactions, setTransactions] = useState([]);
 
-  const [categories, setCategories] = useState(() => {
-    return categoriesList;
-  });
-
-  const [macroTypes, setMacroTypes] = useState(() => {
-    return macroTypesList;
-  });
-
+  // Phân loại và loại: Đọc và lưu trực tiếp từ Supabase
+  const [categories, setCategories] = useState(categoriesList);
+  const [macroTypes, setMacroTypes] = useState(macroTypesList);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
 
   // Quản lý thành viên gia đình (Tự động xóa sạch mã PIN dạng plain text để bảo mật)
   const [members, setMembers] = useState(() => {
     return initialMembers.map((m) => sanitizeMemberForStorage(m));
-  });
-
-  // Trạng thái tài khoản đang đăng nhập (chỉ lưu trong sessionStorage của phiên duyệt web)
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem('nt_auth_user');
-      if (saved) {
-        return sanitizeMemberForStorage(JSON.parse(saved));
-      }
-    } catch (e) {}
-    return null;
   });
 
   const [isMemberManagerOpen, setIsMemberManagerOpen] = useState(false);
@@ -185,25 +201,49 @@ export default function App() {
     }, 2800);
   };
 
-  // 2. Tự động đồng bộ Supabase Cloud nếu đã cấu hình
+  // 1. Tự động xóa sạch mọi key cũ trong localStorage để đảm bảo 100% dữ liệu nằm trên Supabase
   useEffect(() => {
-    if (isSupabaseConfigured) {
-      getTransactions().then((cloudData) => {
-        if (cloudData && cloudData.length > 0) {
-          const withTime = cloudData.map((t) => ({
+    ['nt_transactions', 'nt_monthly_configs', 'nt_current_funds', 'nt_current_month', 'nt_active_user', 'nt_auth_user'].forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch (e) {}
+    });
+  }, []);
+
+  // 2. Tải toàn bộ dữ liệu trực tiếp từ Supabase Cloud khi mở ứng dụng & Đăng ký Realtime
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAllFromSupabase = async () => {
+      if (!isSupabaseConfigured) {
+        setIsLoadingData(false);
+        return;
+      }
+
+      try {
+        const [cloudTxs, cloudConfigs, cloudMembers, cloudCategories] = await Promise.all([
+          getTransactions().catch((e) => { console.error('Lỗi tải transactions:', e); return null; }),
+          getAllMonthlyConfigs().catch((e) => { console.error('Lỗi tải monthly_config:', e); return null; }),
+          getFamilyMembers().catch((e) => { console.error('Lỗi tải family_members:', e); return null; }),
+          getAppCategories().catch((e) => { console.error('Lỗi tải app_categories:', e); return null; })
+        ]);
+
+        if (!isMounted) return;
+
+        // A. Cập nhật giao dịch từ Supabase
+        if (cloudTxs && Array.isArray(cloudTxs)) {
+          const withTime = cloudTxs.map((t, idx) => ({
             ...t,
-            gio: t.gio || getRandomTime()
+            gio: getDeterministicTime(t, idx)
           }));
           setTransactions(sortTransactionsByDateDesc(withTime));
-          showToast('Đã đồng bộ dữ liệu từ Supabase Cloud');
         }
-      });
 
-      // Đồng bộ toàn bộ cấu hình & ghi chú của các tháng từ Supabase
-      getAllMonthlyConfigs().then(async (cloudConfigs) => {
-        const merged = {};
-        if (cloudConfigs && cloudConfigs.length > 0) {
+        // B. Cập nhật cấu hình các tháng và Số tiền hiện có
+        if (cloudConfigs && Array.isArray(cloudConfigs) && cloudConfigs.length > 0) {
+          const merged = {};
           cloudConfigs.forEach((c) => {
+            if (c.id === 'app_categories') return;
             merged[c.id] = {
               id: c.id,
               banner_focus: c.banner_focus || '',
@@ -214,67 +254,39 @@ export default function App() {
             };
           });
 
-          // Phục hồi Số Tiền Hiện Có (ưu tiên từ bản ghi global_wallets hoặc tháng mới nhất)
+          // Phục hồi Số Tiền Hiện Có từ Supabase
           const globalWallet = cloudConfigs.find((c) => c.id === 'global_wallets');
-          if (globalWallet && (Number(globalWallet.tien_ngoai_vi) > 0 || Number(globalWallet.tien_trong_the) > 0)) {
-            const nextFunds = {
-              tien_ngoai_vi: Number(globalWallet.tien_ngoai_vi) || 0,
-              tien_trong_the: Number(globalWallet.tien_trong_the) || 0
-            };
-            setCurrentFunds(nextFunds);
-            try {
-              localStorage.setItem('nt_current_funds', JSON.stringify(nextFunds));
-            } catch (e) {}
-          } else {
-            const sortedMonths = [...cloudConfigs]
-              .filter((c) => c.id !== 'global_wallets')
-              .sort((a, b) => (b.id || '').localeCompare(a.id || ''));
-            const latestWithFunds = sortedMonths.find(
-              (c) => Number(c.tien_ngoai_vi) > 0 || Number(c.tien_trong_the) > 0
-            );
-            if (latestWithFunds) {
-              const nextFunds = {
-                tien_ngoai_vi: Number(latestWithFunds.tien_ngoai_vi) || 0,
-                tien_trong_the: Number(latestWithFunds.tien_trong_the) || 0
-              };
-              setCurrentFunds(nextFunds);
-              try {
-                localStorage.setItem('nt_current_funds', JSON.stringify(nextFunds));
-              } catch (e) {}
-            }
+          if (globalWallet) {
+            const cloudTotal = (Number(globalWallet.tien_ngoai_vi) || 0) + (Number(globalWallet.tien_trong_the) || 0);
+            setCurrentFunds({ so_tien_hien_co: cloudTotal });
           }
+
+          // Tự động kiểm tra và khởi tạo tháng hiện tại trên Supabase nếu chưa có
+          const sysMonth = getSystemCurrentMonth();
+          if (!merged[sysMonth]) {
+            const sortedKeys = Object.keys(merged).sort().reverse();
+            const lastMonthKey = sortedKeys[0];
+            const lastHanMuc = lastMonthKey && merged[lastMonthKey]?.han_muc_chi
+              ? Number(merged[lastMonthKey].han_muc_chi)
+              : 30000000;
+            const [y, m] = sysMonth.split('-');
+            const autoMonth = {
+              id: sysMonth,
+              banner_focus: 'Khởi đầu tháng mới: Chi tiêu thông minh & tiết kiệm',
+              han_muc_chi: lastHanMuc,
+              ghi_chu: `Sổ chi tiêu Tháng ${m}/${y} (Tự động khởi tạo)`,
+              tien_ngoai_vi: 0,
+              tien_trong_the: 0
+            };
+            merged[sysMonth] = autoMonth;
+            upsertMonthlyConfig(autoMonth).catch(console.error);
+          }
+
+          setMonthlyConfigs((prev) => ({ ...prev, ...merged }));
         }
 
-        // Tự động kiểm tra: Nếu là ngày 1 (hoặc tháng hiện tại chưa có), tự động tạo cấu hình tháng mới
-        const sysMonth = getSystemCurrentMonth();
-        if (!merged[sysMonth]) {
-          const sortedKeys = Object.keys(merged).sort().reverse();
-          const lastMonthKey = sortedKeys[0];
-          const lastHanMuc = lastMonthKey && merged[lastMonthKey]?.han_muc_chi
-            ? Number(merged[lastMonthKey].han_muc_chi)
-            : 30000000;
-          const [y, m] = sysMonth.split('-');
-          const autoMonth = {
-            id: sysMonth,
-            banner_focus: 'Khởi đầu tháng mới: Chi tiêu thông minh & tiết kiệm',
-            han_muc_chi: lastHanMuc,
-            ghi_chu: `Sổ chi tiêu Tháng ${m}/${y} (Hệ thống tự động khởi tạo)`,
-            tien_ngoai_vi: 0,
-            tien_trong_the: 0
-          };
-          merged[sysMonth] = autoMonth;
-          upsertMonthlyConfig(autoMonth).catch(console.error);
-        }
-
-        setMonthlyConfigs((prev) => ({
-          ...prev,
-          ...merged
-        }));
-      });
-
-      // Đồng bộ danh sách thành viên gia đình từ Supabase
-      getFamilyMembers().then((cloudMembers) => {
-        if (cloudMembers && cloudMembers.length > 0) {
+        // C. Cập nhật thành viên gia đình từ Supabase
+        if (cloudMembers && Array.isArray(cloudMembers) && cloudMembers.length > 0) {
           const formatted = cloudMembers.map((m) => ({
             id: m.id,
             username: m.username,
@@ -286,93 +298,101 @@ export default function App() {
           }));
           setMembers(formatted);
         }
-      });
-    }
-  }, []);
 
-  // Tự động rà soát ngày 1 tháng mới khi mở app hoặc chuyển tab
-  useEffect(() => {
-    const checkAndProvisionNewMonth = async () => {
-      const sysMonth = getSystemCurrentMonth();
-      if (!monthlyConfigs[sysMonth]) {
-        const sorted = Object.keys(monthlyConfigs).sort().reverse();
-        const prevHanMuc = sorted[0] && monthlyConfigs[sorted[0]]?.han_muc_chi
-          ? Number(monthlyConfigs[sorted[0]].han_muc_chi)
-          : 30000000;
-        const [y, m] = sysMonth.split('-');
-        const newMonthObj = {
-          id: sysMonth,
-          banner_focus: 'Khởi đầu tháng mới: Chi tiêu thông minh & tiết kiệm',
-          han_muc_chi: prevHanMuc,
-          ghi_chu: `Sổ chi tiêu Tháng ${m}/${y} (Tự động khởi tạo)`,
-          tien_ngoai_vi: 0,
-          tien_trong_the: 0
-        };
-
-        setMonthlyConfigs((prev) => {
-          if (prev[sysMonth]) return prev;
-          return {
-            ...prev,
-            [sysMonth]: newMonthObj
-          };
-        });
-
-        if (isSupabaseConfigured) {
-          try {
-            await upsertMonthlyConfig(newMonthObj);
-          } catch (e) {
-            console.error('Lỗi tự động tạo tháng mới:', e);
+        // D. Cập nhật danh mục phân loại & loại từ Supabase
+        if (cloudCategories) {
+          if (cloudCategories.categories && Array.isArray(cloudCategories.categories)) {
+            setCategories(cloudCategories.categories);
+          }
+          if (cloudCategories.macroTypes && Array.isArray(cloudCategories.macroTypes)) {
+            setMacroTypes(cloudCategories.macroTypes);
           }
         }
-        showToast(`🎉 Chào Tháng ${m}/${y}! Đã tự động tạo sổ tháng mới.`);
+      } catch (err) {
+        console.error('Lỗi khi tải dữ liệu từ Supabase:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingData(false);
+        }
       }
     };
 
-    checkAndProvisionNewMonth();
+    loadAllFromSupabase();
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        checkAndProvisionNewMonth();
+    // 3. Đăng ký Realtime Subscriptions từ Supabase
+    const unsubscribeTx = subscribeToTransactions(
+      (newTx) => {
+        setTransactions((prev) => {
+          if (prev.some((t) => t.id === newTx.id)) return prev;
+          const withTime = { ...newTx, gio: newTx.gio || getDeterministicTime(newTx, 0) };
+          return sortTransactionsByDateDesc([withTime, ...prev]);
+        });
+      },
+      (updatedTx) => {
+        setTransactions((prev) => {
+          return prev.map((t) => (t.id === updatedTx.id ? { ...t, ...updatedTx } : t));
+        });
+      },
+      (deletedTx) => {
+        setTransactions((prev) => prev.filter((t) => t.id !== deletedTx.id));
       }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    const interval = setInterval(checkAndProvisionNewMonth, 30 * 60 * 1000);
+    );
+
+    const unsubscribeConfig = subscribeToMonthlyConfig((payload) => {
+      if (payload.new && payload.new.id === 'global_wallets') {
+        const total = (Number(payload.new.tien_ngoai_vi) || 0) + (Number(payload.new.tien_trong_the) || 0);
+        setCurrentFunds({ so_tien_hien_co: total });
+      } else if (payload.new && payload.new.id === 'app_categories' && payload.new.ghi_chu) {
+        try {
+          const parsed = JSON.parse(payload.new.ghi_chu);
+          if (parsed.categories) setCategories(parsed.categories);
+          if (parsed.macroTypes) setMacroTypes(parsed.macroTypes);
+        } catch (e) {}
+      } else if (payload.new && payload.new.id) {
+        setMonthlyConfigs((prev) => ({
+          ...prev,
+          [payload.new.id]: {
+            id: payload.new.id,
+            banner_focus: payload.new.banner_focus || '',
+            han_muc_chi: Number(payload.new.han_muc_chi) || 30000000,
+            ghi_chu: payload.new.ghi_chu || '',
+            tien_ngoai_vi: Number(payload.new.tien_ngoai_vi) || 0,
+            tien_trong_the: Number(payload.new.tien_trong_the) || 0
+          }
+        }));
+      }
+    });
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      clearInterval(interval);
+      isMounted = false;
+      if (unsubscribeTx) unsubscribeTx();
+      if (unsubscribeConfig) unsubscribeConfig();
     };
-  }, [monthlyConfigs]);
+  }, []);
 
-  // Hàm lưu và đồng bộ Số Tiền Hiện Có bền vững (vừa lưu localStorage vừa lưu Supabase)
-  const updateFundsAndPersist = (newFunds) => {
+  // Hàm lưu và đồng bộ Số Tiền Hiện Có thẳng lên Supabase
+  const updateFundsAndPersist = async (newFunds) => {
     setCurrentFunds(newFunds);
-    try {
-      localStorage.setItem('nt_current_funds', JSON.stringify(newFunds));
-    } catch (e) {}
     if (isSupabaseConfigured) {
-      upsertGlobalWallets(newFunds).catch(console.error);
-      const updatedCfg = {
-        ...(monthlyConfigs[currentMonth] || { id: currentMonth }),
-        tien_ngoai_vi: newFunds.tien_ngoai_vi,
-        tien_trong_the: newFunds.tien_trong_the
-      };
-      upsertMonthlyConfig(updatedCfg).catch(console.error);
+      try {
+        await upsertGlobalWallets(newFunds);
+        const updatedCfg = {
+          ...(monthlyConfigs[currentMonth] || { id: currentMonth }),
+          tien_ngoai_vi: newFunds.so_tien_hien_co,
+          tien_trong_the: 0
+        };
+        await upsertMonthlyConfig(updatedCfg);
+      } catch (err) {
+        console.error('Lỗi lưu số tiền hiện có lên Supabase:', err);
+      }
     }
   };
 
-  const handleUpdateTienNgoaiVi = (val) => {
+  const handleUpdateFunds = async (val) => {
     const num = Number(val) || 0;
-    const next = { ...currentFunds, tien_ngoai_vi: num };
-    updateFundsAndPersist(next);
-    showToast(`Đã lưu tiền ngoài ví: ${new Intl.NumberFormat('vi-VN').format(num)} đ`);
-  };
-
-  const handleUpdateTienTrongThe = (val) => {
-    const num = Number(val) || 0;
-    const next = { ...currentFunds, tien_trong_the: num };
-    updateFundsAndPersist(next);
-    showToast(`Đã lưu tiền trong thẻ: ${new Intl.NumberFormat('vi-VN').format(num)} đ`);
+    const next = { so_tien_hien_co: num };
+    await updateFundsAndPersist(next);
+    showToast(`Đã lưu số tiền hiện có lên Supabase: ${new Intl.NumberFormat('vi-VN').format(num)} đ`);
   };
 
   const handleSaveMonthlyConfig = async (newConfig) => {
@@ -381,20 +401,19 @@ export default function App() {
       [newConfig.id]: newConfig
     }));
 
-    if (newConfig.tien_ngoai_vi !== undefined || newConfig.tien_trong_the !== undefined) {
-      const nextFunds = {
-        tien_ngoai_vi: newConfig.tien_ngoai_vi !== undefined ? Number(newConfig.tien_ngoai_vi) : currentFunds.tien_ngoai_vi,
-        tien_trong_the: newConfig.tien_trong_the !== undefined ? Number(newConfig.tien_trong_the) : currentFunds.tien_trong_the,
-      };
-      updateFundsAndPersist(nextFunds);
+    if (newConfig.so_tien_hien_co !== undefined || newConfig.tien_ngoai_vi !== undefined || newConfig.tien_trong_the !== undefined) {
+      const nextAmount = newConfig.so_tien_hien_co !== undefined 
+        ? Number(newConfig.so_tien_hien_co) 
+        : ((Number(newConfig.tien_ngoai_vi) || 0) + (Number(newConfig.tien_trong_the) || 0));
+      await updateFundsAndPersist({ so_tien_hien_co: nextAmount });
     }
 
     if (isSupabaseConfigured) {
       try {
         await upsertMonthlyConfig(newConfig);
-        showToast(`Đã lưu cấu hình tháng ${newConfig.id}`);
+        showToast(`Đã lưu cấu hình tháng ${newConfig.id} lên Supabase`);
       } catch (err) {
-        console.error('Lỗi lưu cấu hình tháng:', err);
+        console.error('Lỗi lưu cấu hình tháng lên Supabase:', err);
         showToast('⚠️ Lỗi lưu cấu hình tháng: ' + (err.message || 'Lỗi'));
       }
     } else {
@@ -448,48 +467,73 @@ export default function App() {
   }, [transactions, currentMonth]);
 
   // Quản lý CRUD Phân loại
-  const handleAddCategory = (newCat) => {
+  // Quản lý CRUD Phân loại
+  const handleAddCategory = async (newCat) => {
     if (!categories.includes(newCat)) {
-      setCategories((prev) => [...prev, newCat]);
+      const updated = [...categories, newCat];
+      setCategories(updated);
       showToast(`Đã thêm phân loại: ${newCat}`);
+      if (isSupabaseConfigured) {
+        await upsertAppCategories(updated, macroTypes);
+      }
     }
   };
 
-  const handleUpdateCategory = (oldCat, newCat) => {
-    setCategories((prev) => prev.map((c) => (c === oldCat ? newCat : c)));
+  const handleUpdateCategory = async (oldCat, newCat) => {
+    const updated = categories.map((c) => (c === oldCat ? newCat : c));
+    setCategories(updated);
     setTransactions((prev) =>
       prev.map((t) => (t.phan_loai === oldCat ? { ...t, phan_loai: newCat } : t))
     );
     showToast(`Đã đổi tên phân loại thành: ${newCat}`);
-  };
-
-  const handleDeleteCategory = (cat) => {
-    setCategories((prev) => prev.filter((c) => c !== cat));
-    showToast(`Đã xóa phân loại: ${cat}`);
-  };
-
-  // Quản lý CRUD Loại (macro types)
-  const handleAddMacroType = (newType) => {
-    if (!macroTypes.includes(newType)) {
-      setMacroTypes((prev) => [...prev, newType]);
-      showToast(`Đã thêm loại: ${newType}`);
+    if (isSupabaseConfigured) {
+      await upsertAppCategories(updated, macroTypes);
     }
   };
 
-  const handleUpdateMacroType = (oldType, newType) => {
-    setMacroTypes((prev) => prev.map((t) => (t === oldType ? newType : t)));
+  const handleDeleteCategory = async (cat) => {
+    const updated = categories.filter((c) => c !== cat);
+    setCategories(updated);
+    showToast(`Đã xóa phân loại: ${cat}`);
+    if (isSupabaseConfigured) {
+      await upsertAppCategories(updated, macroTypes);
+    }
+  };
+
+  // Quản lý CRUD Loại (macro types)
+  const handleAddMacroType = async (newType) => {
+    if (!macroTypes.includes(newType)) {
+      const updated = [...macroTypes, newType];
+      setMacroTypes(updated);
+      showToast(`Đã thêm loại: ${newType}`);
+      if (isSupabaseConfigured) {
+        await upsertAppCategories(categories, updated);
+      }
+    }
+  };
+
+  const handleUpdateMacroType = async (oldType, newType) => {
+    const updated = macroTypes.map((t) => (t === oldType ? newType : t));
+    setMacroTypes(updated);
     setTransactions((prev) =>
       prev.map((t) => (t.loai === oldType ? { ...t, loai: newType } : t))
     );
     showToast(`Đã đổi tên loại thành: ${newType}`);
+    if (isSupabaseConfigured) {
+      await upsertAppCategories(categories, updated);
+    }
   };
 
-  const handleDeleteMacroType = (type) => {
-    setMacroTypes((prev) => prev.filter((t) => t !== type));
+  const handleDeleteMacroType = async (type) => {
+    const updated = macroTypes.filter((t) => t !== type);
+    setMacroTypes(updated);
     showToast(`Đã xóa loại: ${type}`);
+    if (isSupabaseConfigured) {
+      await upsertAppCategories(categories, updated);
+    }
   };
 
-  // Đăng nhập & Đăng xuất (chỉ dùng sessionStorage trong phiên, không ghi localStorage)
+  // Đăng nhập & Đăng xuất (lưu phiên đăng nhập an toàn trong sessionStorage)
   const handleLoginSuccess = (member) => {
     setCurrentUser(member);
     setActiveUser(member.username);
@@ -502,7 +546,8 @@ export default function App() {
   const handleLogout = () => {
     try {
       sessionStorage.removeItem('nt_auth_user');
-      localStorage.clear();
+      localStorage.removeItem('nt_auth_user');
+      localStorage.removeItem('nt_active_user');
     } catch (e) {}
     setCurrentUser(null);
     showToast('Đã đăng xuất khỏi tài khoản');
@@ -558,69 +603,59 @@ export default function App() {
     }
   };
 
-  // Thêm giao dịch & tự động thay đổi Số tiền hiện có (Ví / Thẻ)
+  // Thêm giao dịch & lưu thẳng lên Supabase
   const handleAddTransaction = async (newTx) => {
-    setTransactions((prev) => sortTransactionsByDateDesc([newTx, ...prev]));
+    // Đảm bảo có giờ cố định
+    const txWithTime = {
+      ...newTx,
+      gio: newTx.gio || getDeterministicTime(newTx, 0)
+    };
+    setTransactions((prev) => sortTransactionsByDateDesc([txWithTime, ...prev]));
 
-    // Điều chỉnh số tiền hiện có theo nguồn tiền
-    const isThu = (Number(newTx.thu) || 0) > 0;
-    const val = isThu ? Number(newTx.thu) : Number(newTx.chi);
-    const source = newTx.wallet_source || (newTx.ghi_chu?.includes('[Tiền mặt]') ? 'cash' : 'card');
+    // Điều chỉnh số tiền hiện có (+ thu, - chi)
+    const isThu = (Number(txWithTime.thu) || 0) > 0;
+    const val = isThu ? Number(txWithTime.thu) : Number(txWithTime.chi);
 
-    const nextFunds = { ...currentFunds };
-    if (source === 'cash') {
-      nextFunds.tien_ngoai_vi = isThu 
-        ? nextFunds.tien_ngoai_vi + val 
-        : Math.max(0, nextFunds.tien_ngoai_vi - val);
-    } else {
-      nextFunds.tien_trong_the = isThu 
-        ? nextFunds.tien_trong_the + val 
-        : Math.max(0, nextFunds.tien_trong_the - val);
-    }
-    updateFundsAndPersist(nextFunds);
+    const nextAmount = isThu 
+      ? currentFunds.so_tien_hien_co + val 
+      : Math.max(0, currentFunds.so_tien_hien_co - val);
+    
+    updateFundsAndPersist({ so_tien_hien_co: nextAmount });
 
-    const sourceLabel = source === 'cash' ? 'Tiền ngoài ví' : 'Tiền trong thẻ';
     const actionLabel = isThu 
-      ? `+${new Intl.NumberFormat('vi-VN').format(val)} đ vào ${sourceLabel}` 
-      : `-${new Intl.NumberFormat('vi-VN').format(val)} đ từ ${sourceLabel}`;
+      ? `+${new Intl.NumberFormat('vi-VN').format(val)} đ vào số tiền hiện có` 
+      : `-${new Intl.NumberFormat('vi-VN').format(val)} đ từ số tiền hiện có`;
 
     if (isSupabaseConfigured) {
       try {
-        await addTransaction(newTx);
-        showToast(`Đã ghi sổ & cập nhật ${actionLabel}`);
+        await addTransaction(txWithTime);
+        showToast(`Đã lưu vào Supabase & ${actionLabel}`);
       } catch (err) {
         console.error('Lỗi lưu Supabase:', err);
         showToast('⚠️ Không thể lưu lên Supabase: ' + (err.message || 'Lỗi'));
       }
     } else {
-      showToast(`Đã ghi sổ & cập nhật ${actionLabel}`);
+      showToast(`Đã ghi sổ & ${actionLabel}`);
     }
   };
 
-  // Xóa giao dịch & hoàn lại số tiền hiện có tương ứng
+  // Xóa giao dịch & hoàn lại số tiền hiện có trên Supabase
   const handleDeleteTransaction = async (id) => {
     const txToDelete = transactions.find((t) => t.id === id);
     if (txToDelete) {
       const isThu = (Number(txToDelete.thu) || 0) > 0;
       const val = isThu ? Number(txToDelete.thu) : Number(txToDelete.chi);
-      const source = txToDelete.wallet_source || (txToDelete.ghi_chu?.includes('[Tiền mặt]') ? 'cash' : 'card');
 
-      const nextFunds = { ...currentFunds };
-      // Hoàn lại: Nếu là chi thì cộng lại tiền vào ví/thẻ, nếu là thu thì trừ lại
-      if (source === 'cash') {
-        nextFunds.tien_ngoai_vi = isThu 
-          ? Math.max(0, nextFunds.tien_ngoai_vi - val) 
-          : nextFunds.tien_ngoai_vi + val;
-      } else {
-        nextFunds.tien_trong_the = isThu 
-          ? Math.max(0, nextFunds.tien_trong_the - val) 
-          : nextFunds.tien_trong_the + val;
-      }
-      updateFundsAndPersist(nextFunds);
+      // Hoàn lại: Nếu là chi thì cộng lại tiền, nếu là thu thì trừ lại
+      const nextAmount = isThu 
+        ? Math.max(0, currentFunds.so_tien_hien_co - val) 
+        : currentFunds.so_tien_hien_co + val;
+
+      updateFundsAndPersist({ so_tien_hien_co: nextAmount });
     }
 
     setTransactions((prev) => prev.filter((t) => t.id !== id));
-    showToast('Đã xóa dòng khỏi sổ & hoàn lại số tiền hiện có');
+    showToast('Đã xóa khỏi Supabase & hoàn lại số tiền hiện có');
 
     if (isSupabaseConfigured) {
       try {
@@ -632,53 +667,35 @@ export default function App() {
     }
   };
 
-  // Cập nhật giao dịch & điều chỉnh lại số tiền hiện có nếu có thay đổi số tiền hoặc nguồn
+  // Cập nhật giao dịch & điều chỉnh lại số tiền hiện có trên Supabase
   const handleUpdateTransaction = async (id, updatesOrField, value) => {
     const updates = typeof updatesOrField === 'object' ? updatesOrField : { [updatesOrField]: value };
     const oldTx = transactions.find((t) => t.id === id);
 
-    if (oldTx && (updates.thu !== undefined || updates.chi !== undefined || updates.wallet_source !== undefined)) {
+    if (oldTx && (updates.thu !== undefined || updates.chi !== undefined)) {
       const oldIsThu = (Number(oldTx.thu) || 0) > 0;
       const oldVal = oldIsThu ? Number(oldTx.thu) : Number(oldTx.chi);
-      const oldSource = oldTx.wallet_source || (oldTx.ghi_chu?.includes('[Tiền mặt]') ? 'cash' : 'card');
 
       const newThu = updates.thu !== undefined ? Number(updates.thu) : Number(oldTx.thu);
       const newChi = updates.chi !== undefined ? Number(updates.chi) : Number(oldTx.chi);
       const newIsThu = newThu > 0;
       const newVal = newIsThu ? newThu : newChi;
-      const newSource = updates.wallet_source || oldSource;
-
-      const nextFunds = { ...currentFunds };
 
       // 1. Hoàn lại số tiền cũ
-      if (oldSource === 'cash') {
-        nextFunds.tien_ngoai_vi = oldIsThu 
-          ? Math.max(0, nextFunds.tien_ngoai_vi - oldVal) 
-          : nextFunds.tien_ngoai_vi + oldVal;
-      } else {
-        nextFunds.tien_trong_the = oldIsThu 
-          ? Math.max(0, nextFunds.tien_trong_the - oldVal) 
-          : nextFunds.tien_trong_the + oldVal;
-      }
+      let temp = oldIsThu 
+        ? Math.max(0, currentFunds.so_tien_hien_co - oldVal) 
+        : currentFunds.so_tien_hien_co + oldVal;
 
       // 2. Áp dụng số tiền mới
-      if (newSource === 'cash') {
-        nextFunds.tien_ngoai_vi = newIsThu 
-          ? nextFunds.tien_ngoai_vi + newVal 
-          : Math.max(0, nextFunds.tien_ngoai_vi - newVal);
-      } else {
-        nextFunds.tien_trong_the = newIsThu 
-          ? nextFunds.tien_trong_the + newVal 
-          : Math.max(0, nextFunds.tien_trong_the - newVal);
-      }
+      let nextAmount = newIsThu 
+        ? temp + newVal 
+        : Math.max(0, temp - newVal);
 
-      updateFundsAndPersist(nextFunds);
+      updateFundsAndPersist({ so_tien_hien_co: nextAmount });
     }
 
-    setTransactions((prev) =>
-      sortTransactionsByDateDesc(prev.map((t) => (t.id === id ? { ...t, ...updates } : t)))
-    );
-    showToast('Đã cập nhật khoản thu chi & số tiền hiện có');
+    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+    showToast('Đã cập nhật trên Supabase');
 
     if (isSupabaseConfigured) {
       try {
@@ -736,6 +753,41 @@ export default function App() {
     );
   }
 
+  // NẾU ĐANG TẢI DỮ LIỆU TỪ SUPABASE CLOUD
+  if (isLoadingData) {
+    return (
+      <div className="min-h-screen bg-[#FFF8FA] flex flex-col items-center justify-center relative p-4 select-none">
+        <FloatingAmbience />
+        <div className="relative z-10 text-center space-y-4 max-w-sm w-full bg-white/85 backdrop-blur-md p-8 rounded-3xl border border-pink-200/90 shadow-xl shadow-pink-200/30">
+          <div className="relative inline-flex items-center justify-center shrink-0 w-16 h-16 transition-transform">
+            <svg viewBox="0 0 32 32" className="w-full h-full drop-shadow-md animate-pulse" fill="url(#pinkHeartLoading)">
+              <defs>
+                <linearGradient id="pinkHeartLoading" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#FB7185" />
+                  <stop offset="50%" stopColor="#EC4899" />
+                  <stop offset="100%" stopColor="#E11D48" />
+                </linearGradient>
+              </defs>
+              <path d="M16 28.5C15.5 28.5 15 28.3 14.6 28C13.2 26.9 2 17.8 2 10.5C2 5.8 5.8 2 10.5 2C13.2 2 15.6 3.2 16 3.5C16.4 3.2 18.8 2 21.5 2C26.2 2 30 5.8 30 10.5C30 17.8 18.8 26.9 17.4 28C17 28.3 16.5 28.5 16 28.5Z" />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center pb-1 text-white font-black text-xl tracking-tight font-sans">
+              NT
+            </span>
+          </div>
+
+          <div>
+            <h3 className="font-bold text-slate-800 text-base">Sổ Thu Chi Nhựt & Trang</h3>
+            <p className="text-xs text-pink-600/90 font-medium mt-1">Đang đồng bộ dữ liệu từ Supabase Cloud...</p>
+          </div>
+
+          <div className="w-full bg-pink-100/80 rounded-full h-1.5 overflow-hidden">
+            <div className="bg-gradient-to-r from-pink-400 via-rose-400 to-pink-500 h-full w-1/2 rounded-full animate-indeterminate"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FFF8FA]/80 text-slate-800 flex flex-col justify-between relative">
       {/* Hiệu ứng bong bóng và trái tim bay lơ lửng */}
@@ -781,7 +833,9 @@ export default function App() {
         isOpen={isMonthManagerOpen}
         onClose={() => setIsMonthManagerOpen(false)}
         currentMonth={currentMonth}
-        onSelectMonth={(m) => setCurrentMonth(m)}
+        onSelectMonth={(m) => {
+          setCurrentMonth(m);
+        }}
         monthlyConfigs={monthlyConfigs}
         onSaveMonthlyConfig={handleSaveMonthlyConfig}
         availableMonths={availableMonths}
@@ -809,7 +863,7 @@ export default function App() {
       {/* Đầu trang (Thanh điều hướng dính) */}
       <Header
         activeUser={activeUser}
-        setActiveUser={setActiveUser}
+        setActiveUser={handleSelectActiveUser}
         privacyMode={privacyMode}
         setPrivacyMode={setPrivacyMode}
         members={members}
@@ -833,14 +887,15 @@ export default function App() {
         <BudgetPulse
           transactions={currentMonthTransactions}
           currentMonth={currentMonth}
-          onSelectMonth={(m) => setCurrentMonth(m)}
+          onSelectMonth={(m) => {
+            setCurrentMonth(m);
+          }}
           monthlyConfig={activeMonthlyConfig}
           onOpenMonthManager={() => setIsMonthManagerOpen(true)}
           privacyMode={privacyMode}
           availableMonths={availableMonths}
           currentFunds={currentFunds}
-          onUpdateTienNgoaiVi={handleUpdateTienNgoaiVi}
-          onUpdateTienTrongThe={handleUpdateTienTrongThe}
+          onUpdateFunds={handleUpdateFunds}
         />
 
         {/* Biểu đồ tròn cơ cấu chi tiêu & thu nhập theo phân loại */}

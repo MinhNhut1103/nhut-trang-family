@@ -9,8 +9,6 @@ import {
   PencilSimple, 
   Clock, 
   Plus, 
-  ArrowDown, 
-  ArrowUp, 
   Calendar, 
   Funnel, 
   ArrowCounterClockwise, 
@@ -27,11 +25,10 @@ import {
   HandCoins,
   GraduationCap,
   Gift,
-  ArrowUpRight,
   ArrowDownRight,
   TrendUp
 } from '@phosphor-icons/react';
-import { categoriesList, macroTypesList, formatDateDisplay, sortTransactionsByDateDesc, normalizeDateISO } from '../data/initialData';
+import { categoriesList, macroTypesList, formatDateDisplay, sortTransactionsByDateDesc } from '../data/initialData';
 import TransactionModal from './TransactionModal';
 
 // Hàm lấy icon và màu sắc nhận diện trực quan theo phân loại
@@ -632,27 +629,8 @@ export default function TransactionList({
 
                         {/* Nội dung */}
                         <td className="py-2.5 px-3.5 font-medium text-slate-800">
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div>
                             <span>{tx.noi_dung}</span>
-                            {tx.wallet_source === 'cash' || tx.ghi_chu?.includes('[Tiền mặt]') ? (
-                              <button
-                                type="button"
-                                onClick={() => onUpdateTransaction && onUpdateTransaction(tx.id, 'wallet_source', 'card')}
-                                className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/80 cursor-pointer transition-colors"
-                                title="Đang tính vào Tiền ngoài ví (Tiền mặt). Bấm để chuyển sang Tiền trong thẻ"
-                              >
-                                💵 Ví
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => onUpdateTransaction && onUpdateTransaction(tx.id, 'wallet_source', 'cash')}
-                                className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200/80 cursor-pointer transition-colors"
-                                title="Đang tính vào Tiền trong thẻ (Ngân hàng). Bấm để chuyển sang Tiền ngoài ví"
-                              >
-                                💳 Thẻ
-                              </button>
-                            )}
                           </div>
                           {tx.ghi_chu && (
                             <div className="text-[11px] text-slate-400 font-normal mt-0.5">
@@ -789,29 +767,10 @@ export default function TransactionList({
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div>
                             <h4 className="text-sm font-bold text-slate-800 leading-snug break-words">
                               {tx.noi_dung}
                             </h4>
-                            {tx.wallet_source === 'cash' || tx.ghi_chu?.includes('[Tiền mặt]') ? (
-                              <button
-                                type="button"
-                                onClick={() => onUpdateTransaction && onUpdateTransaction(tx.id, 'wallet_source', 'card')}
-                                className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/80 cursor-pointer transition-colors"
-                                title="Đang tính vào Tiền ngoài ví (Tiền mặt). Bấm để chuyển sang Tiền trong thẻ"
-                              >
-                                💵 Ví
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => onUpdateTransaction && onUpdateTransaction(tx.id, 'wallet_source', 'cash')}
-                                className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200/80 cursor-pointer transition-colors"
-                                title="Đang tính vào Tiền trong thẻ (Ngân hàng). Bấm để chuyển sang Tiền ngoài ví"
-                              >
-                                💳 Thẻ
-                              </button>
-                            )}
                           </div>
                           {tx.ghi_chu && (
                             <p className="text-xs text-slate-500 font-normal break-words">

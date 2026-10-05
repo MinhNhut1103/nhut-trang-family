@@ -59,17 +59,14 @@ export async function getTransactions() {
   }
   return data.map((t) => ({
     ...t,
-    wallet_source: t.ghi_chu?.includes('[Tiền mặt]') ? 'cash' : 'card'
+    ghi_chu: (t.ghi_chu || '').replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim()
   }));
 }
 
 export async function addTransaction(transaction) {
   if (!supabase) return null;
 
-  const walletSource = transaction.wallet_source || 'card';
-  const tag = walletSource === 'cash' ? '[Tiền mặt]' : '[Thẻ NH]';
-  let cleanNote = (transaction.ghi_chu || '').replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim();
-  const finalNote = cleanNote ? `${tag} ${cleanNote}` : tag;
+  const cleanNote = (transaction.ghi_chu || '').replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim();
 
   // Sanitize payload chỉ gửi các cột chuẩn
   const payload = {
@@ -82,7 +79,7 @@ export async function addTransaction(transaction) {
     loai: transaction.loai || 'thiết yếu',
     vault: transaction.vault || 'shared',
     author: transaction.author || 'Nhựt',
-    ghi_chu: finalNote
+    ghi_chu: cleanNote
   };
   if (transaction.gio) {
     payload.gio = transaction.gio;
@@ -108,7 +105,7 @@ export async function addTransaction(transaction) {
     console.error('Error inserting transaction to Supabase:', error);
     throw error;
   }
-  return data ? { ...data[0], wallet_source: walletSource } : null;
+  return data ? data[0] : null;
 }
 
 export async function deleteTransaction(id) {
@@ -136,10 +133,8 @@ export async function updateTransaction(id, updates) {
     }
   });
 
-  if (updates.wallet_source) {
-    const tag = updates.wallet_source === 'cash' ? '[Tiền mặt]' : '[Thẻ NH]';
-    let cleanNote = (payload.ghi_chu || '').replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim();
-    payload.ghi_chu = cleanNote ? `${tag} ${cleanNote}` : tag;
+  if (payload.ghi_chu !== undefined) {
+    payload.ghi_chu = (payload.ghi_chu || '').replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim();
   }
 
   if (payload.thu !== undefined) payload.thu = Number(payload.thu) || 0;
@@ -256,16 +251,20 @@ export async function getGlobalWallets() {
   if (error && error.code !== 'PGRST116') {
     return null;
   }
-  return data;
+  if (!data) return null;
+  return {
+    so_tien_hien_co: (Number(data.tien_ngoai_vi) || 0) + (Number(data.tien_trong_the) || 0)
+  };
 }
 
 export async function upsertGlobalWallets(wallets) {
   if (!supabase) return null;
+  const amount = Number(wallets?.so_tien_hien_co ?? ((Number(wallets?.tien_ngoai_vi) || 0) + (Number(wallets?.tien_trong_the) || 0))) || 0;
   const payload = {
     id: 'global_wallets',
-    banner_focus: 'Số tiền hiện có (Ví & Thẻ)',
-    tien_ngoai_vi: Number(wallets.tien_ngoai_vi) || 0,
-    tien_trong_the: Number(wallets.tien_trong_the) || 0,
+    banner_focus: 'Số tiền hiện có',
+    tien_ngoai_vi: amount,
+    tien_trong_the: 0,
     updated_at: new Date().toISOString()
   };
   try {
@@ -508,5 +507,82 @@ export async function syncAllLocalToSupabase({ transactions = [], monthlyConfigs
 
   return results;
 }
+
+// ==========================================
+// 7. QUẢN LÝ PHÂN LOẠI & LOẠI TRÊN SUPABASE
+// ==========================================
+
+export async function getAppCategories() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('monthly_config')
+    .select('ghi_chu')
+    .eq('id', 'app_categories')
+    .single();
+
+  if (error || !data?.ghi_chu) return null;
+  try {
+    return JSON.parse(data.ghi_chu);
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function upsertAppCategories(categories, macroTypes) {
+  if (!supabase) return null;
+  const payload = {
+    id: 'app_categories',
+    banner_focus: 'Danh mục phân loại',
+    ghi_chu: JSON.stringify({ categories, macroTypes }),
+    updated_at: new Date().toISOString()
+  };
+  const { data, error } = await supabase
+    .from('monthly_config')
+    .upsert(payload)
+    .select();
+  if (error) {
+    console.error('Error saving app_categories to Supabase:', error);
+  }
+  return data ? data[0] : null;
+}
+
+// ==========================================
+// 8. SUPABASE REALTIME SUBSCRIPTIONS
+// ==========================================
+
+export function subscribeToTransactions(onInsert, onUpdate, onDelete) {
+  if (!supabase) return () => {};
+  const channel = supabase
+    .channel('realtime_transactions_' + Date.now())
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, (payload) => {
+      if (onInsert && payload.new) onInsert(payload.new);
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'transactions' }, (payload) => {
+      if (onUpdate && payload.new) onUpdate(payload.new);
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'transactions' }, (payload) => {
+      if (onDelete && payload.old) onDelete(payload.old);
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+export function subscribeToMonthlyConfig(onChange) {
+  if (!supabase) return () => {};
+  const channel = supabase
+    .channel('realtime_monthly_config_' + Date.now())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'monthly_config' }, (payload) => {
+      if (onChange) onChange(payload);
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
 
 

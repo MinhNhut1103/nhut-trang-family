@@ -10,8 +10,6 @@ import {
   ArrowUpRight, 
   ArrowDownRight, 
   Wallet,
-  Money,
-  CreditCard,
   Check,
   X,
   Sparkle
@@ -25,9 +23,8 @@ export default function BudgetPulse({
   monthlyConfig,
   onOpenMonthManager,
   availableMonths = [],
-  currentFunds = { tien_ngoai_vi: 0, tien_trong_the: 0 },
-  onUpdateTienNgoaiVi,
-  onUpdateTienTrongThe
+  currentFunds = { so_tien_hien_co: 0 },
+  onUpdateFunds
 }) {
   const formatMoney = (val) => {
     if (privacyMode) return '•••••• đ';
@@ -39,57 +36,30 @@ export default function BudgetPulse({
   const totalChi = transactions.reduce((sum, t) => sum + (Number(t.chi) || 0), 0);
   const netBalance = totalThu - totalChi;
 
-  // SỐ TIỀN HIỆN CÓ: Lấy từ currentFunds toàn cục (hoặc fallback monthlyConfig)
-  const tienNgoaiVi = currentFunds?.tien_ngoai_vi !== undefined 
-    ? Number(currentFunds.tien_ngoai_vi) 
-    : (Number(monthlyConfig?.tien_ngoai_vi) || 0);
+  // SỐ TIỀN HIỆN CÓ: Lấy từ currentFunds toàn cục (tự động cộng dồn nếu từ phiên bản cũ)
+  const soTienHienCo = currentFunds?.so_tien_hien_co !== undefined 
+    ? Number(currentFunds.so_tien_hien_co) 
+    : ((Number(currentFunds?.tien_ngoai_vi) || 0) + (Number(currentFunds?.tien_trong_the) || 0) || (Number(monthlyConfig?.tien_ngoai_vi) || 0) + (Number(monthlyConfig?.tien_trong_the) || 0));
 
-  const tienTrongThe = currentFunds?.tien_trong_the !== undefined 
-    ? Number(currentFunds.tien_trong_the) 
-    : (Number(monthlyConfig?.tien_trong_the) || 0);
+  // State chỉnh sửa Số tiền hiện có
+  const [isEditingFunds, setIsEditingFunds] = useState(false);
+  const [fundsInput, setFundsInput] = useState('');
 
-  const tongTienHienCo = tienNgoaiVi + tienTrongThe;
-
-  // State chỉnh sửa Tiền ngoài ví
-  const [isEditingCash, setIsEditingCash] = useState(false);
-  const [cashInput, setCashInput] = useState('');
-
-  const handleStartEditCash = () => {
-    setCashInput(tienNgoaiVi > 0 ? String(tienNgoaiVi) : '');
-    setIsEditingCash(true);
+  const handleStartEditFunds = () => {
+    setFundsInput(soTienHienCo > 0 ? String(soTienHienCo) : '');
+    setIsEditingFunds(true);
   };
 
-  const handleSaveCash = () => {
-    const num = Number(String(cashInput).replace(/\D/g, '')) || 0;
-    if (onUpdateTienNgoaiVi) {
-      onUpdateTienNgoaiVi(num);
+  const handleSaveFunds = () => {
+    const num = Number(String(fundsInput).replace(/\D/g, '')) || 0;
+    if (onUpdateFunds) {
+      onUpdateFunds(num);
     }
-    setIsEditingCash(false);
+    setIsEditingFunds(false);
   };
 
-  const handleCancelCash = () => {
-    setIsEditingCash(false);
-  };
-
-  // State chỉnh sửa Tiền trong thẻ
-  const [isEditingCard, setIsEditingCard] = useState(false);
-  const [cardInput, setCardInput] = useState('');
-
-  const handleStartEditCard = () => {
-    setCardInput(tienTrongThe > 0 ? String(tienTrongThe) : '');
-    setIsEditingCard(true);
-  };
-
-  const handleSaveCard = () => {
-    const num = Number(String(cardInput).replace(/\D/g, '')) || 0;
-    if (onUpdateTienTrongThe) {
-      onUpdateTienTrongThe(num);
-    }
-    setIsEditingCard(false);
-  };
-
-  const handleCancelCard = () => {
-    setIsEditingCard(false);
+  const handleCancelFunds = () => {
+    setIsEditingFunds(false);
   };
 
   // Danh sách tháng cho dropdown
@@ -130,198 +100,94 @@ export default function BudgetPulse({
       {/* ========================================================================= */}
       <div className="card-soft p-3.5 sm:p-5 bg-gradient-to-br from-white via-pink-50/20 to-emerald-50/20 border border-pink-200/90 shadow-xs shadow-pink-100/30">
         {/* Header Khối Số Tiền Hiện Có */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-pink-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-xs shrink-0">
-              <Wallet size={18} weight="fill" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-xs shrink-0">
+              <Wallet size={22} weight="fill" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-bold text-slate-800 tracking-tight">
+                <h2 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
                   Số Tiền Hiện Có
                 </h2>
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200/80">
                   Tài sản khả dụng
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Tự động cộng khi Thu và trừ khi Chi trong tháng — Phân bổ giữa Tiền ngoài ví & Tiền trong thẻ
+              <p className="text-xs text-slate-500">
+                Tự động cộng khi có khoản Thu (+) và trừ khi có khoản Chi (-) trong tháng
               </p>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400">
-            <Sparkle size={13} weight="fill" className="text-amber-500" />
-            <span>Bấm vào số tiền hoặc biểu tượng bút để sửa</span>
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            {isEditingFunds ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="0"
+                  value={fundsInput ? Number(fundsInput.replace(/\D/g, '')).toLocaleString('vi-VN') : ''}
+                  onChange={(e) => setFundsInput(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveFunds();
+                    if (e.key === 'Escape') handleCancelFunds();
+                  }}
+                  className="text-base sm:text-lg font-bold text-emerald-950 bg-white border border-emerald-300 rounded-xl py-1 px-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 tabular-nums w-44 sm:w-52 shadow-2xs"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveFunds}
+                  className="p-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs cursor-pointer shrink-0 transition-colors shadow-2xs"
+                  title="Lưu số tiền hiện có"
+                >
+                  <Check size={16} weight="bold" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelFunds}
+                  className="p-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs cursor-pointer shrink-0 transition-colors"
+                  title="Hủy"
+                >
+                  <X size={16} weight="bold" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div 
+                  onClick={handleStartEditFunds}
+                  className="text-2xl sm:text-3xl font-extrabold text-emerald-800 tabular-nums font-money cursor-pointer hover:underline py-0.5 tracking-tight"
+                  title="Bấm để chỉnh sửa số tiền hiện có"
+                >
+                  {formatMoney(soTienHienCo)}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleStartEditFunds}
+                  className="text-slate-400 hover:text-emerald-700 p-1.5 rounded-lg hover:bg-emerald-50 transition-colors cursor-pointer"
+                  title="Chỉnh sửa số tiền hiện có"
+                >
+                  <PencilSimple size={16} weight="bold" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 3 Thẻ: Tiền ngoài ví - Tiền trong thẻ - Tổng tài sản hiện có */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-          
-          {/* 1. TIỀN NGOÀI VÍ (TIỀN MẶT) */}
-          <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/80 hover:border-amber-300 transition-all relative group">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-                  <Money size={14} weight="bold" />
-                </div>
-                <span className="text-xs font-bold text-amber-950 uppercase tracking-wider">
-                  Tiền Ngoài Ví
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleStartEditCash}
-                className="text-amber-700 hover:text-amber-950 p-1 rounded-md hover:bg-amber-100/80 transition-colors cursor-pointer"
-                title="Chỉnh sửa số tiền mặt ngoài ví"
-              >
-                <PencilSimple size={13} weight="bold" />
-              </button>
-            </div>
-
-            {isEditingCash ? (
-              <div className="flex items-center gap-1 mt-1">
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="0"
-                  value={cashInput ? Number(cashInput.replace(/\D/g, '')).toLocaleString('vi-VN') : ''}
-                  onChange={(e) => setCashInput(e.target.value.replace(/\D/g, ''))}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveCash();
-                    if (e.key === 'Escape') handleCancelCash();
-                  }}
-                  className="w-full text-sm font-bold text-amber-950 bg-white border border-amber-300 rounded-lg py-1 px-2 focus:outline-none focus:ring-1 focus:ring-amber-500 tabular-nums"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveCash}
-                  className="p-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-xs cursor-pointer shrink-0"
-                  title="Lưu"
-                >
-                  <Check size={14} weight="bold" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelCash}
-                  className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer shrink-0"
-                  title="Hủy"
-                >
-                  <X size={14} weight="bold" />
-                </button>
-              </div>
-            ) : (
-              <div 
-                onClick={handleStartEditCash}
-                className="text-lg sm:text-xl font-bold text-amber-900 tabular-nums font-money cursor-pointer hover:underline py-0.5"
-                title="Bấm để chỉnh sửa tiền mặt ngoài ví"
-              >
-                {formatMoney(tienNgoaiVi)}
-              </div>
-            )}
-            <span className="text-[10px] text-amber-700/80 font-medium block mt-0.5">
-              Tiền mặt sẵn có bên ngoài
+        {/* Dòng tóm tắt biến động tháng */}
+        <div className="mt-3 pt-2.5 border-t border-pink-100/80 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-semibold text-slate-700">Biến động {currentMonthLabel}:</span>
+            <span className={`font-bold ${netBalance >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+              {netBalance >= 0 ? '+' : ''}{formatMoney(netBalance)}
+            </span>
+            <span className="text-[11px] text-slate-400 font-normal">
+              (Thu: +{formatMoney(totalThu)} • Chi: -{formatMoney(totalChi)})
             </span>
           </div>
-
-          {/* 2. TIỀN TRONG THẺ (NGÂN HÀNG / ATM) */}
-          <div className="p-3.5 rounded-2xl bg-blue-50/50 border border-blue-200/80 hover:border-blue-300 transition-all relative group">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                  <CreditCard size={14} weight="bold" />
-                </div>
-                <span className="text-xs font-bold text-blue-950 uppercase tracking-wider">
-                  Tiền Trong Thẻ
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleStartEditCard}
-                className="text-blue-700 hover:text-blue-950 p-1 rounded-md hover:bg-blue-100/80 transition-colors cursor-pointer"
-                title="Chỉnh sửa số tiền trong thẻ ngân hàng"
-              >
-                <PencilSimple size={13} weight="bold" />
-              </button>
-            </div>
-
-            {isEditingCard ? (
-              <div className="flex items-center gap-1 mt-1">
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="0"
-                  value={cardInput ? Number(cardInput.replace(/\D/g, '')).toLocaleString('vi-VN') : ''}
-                  onChange={(e) => setCardInput(e.target.value.replace(/\D/g, ''))}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveCard();
-                    if (e.key === 'Escape') handleCancelCard();
-                  }}
-                  className="w-full text-sm font-bold text-blue-950 bg-white border border-blue-300 rounded-lg py-1 px-2 focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveCard}
-                  className="p-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs cursor-pointer shrink-0"
-                  title="Lưu"
-                >
-                  <Check size={14} weight="bold" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelCard}
-                  className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer shrink-0"
-                  title="Hủy"
-                >
-                  <X size={14} weight="bold" />
-                </button>
-              </div>
-            ) : (
-              <div 
-                onClick={handleStartEditCard}
-                className="text-lg sm:text-xl font-bold text-blue-900 tabular-nums font-money cursor-pointer hover:underline py-0.5"
-                title="Bấm để chỉnh sửa tiền trong thẻ ngân hàng"
-              >
-                {formatMoney(tienTrongThe)}
-              </div>
-            )}
-            <span className="text-[10px] text-blue-700/80 font-medium block mt-0.5">
-              Tài khoản / Thẻ ATM ngân hàng
-            </span>
+          <div className="text-[11px] text-slate-400 italic">
+            Bấm vào số tiền để chỉnh sửa số dư bất kỳ lúc nào
           </div>
-
-          {/* 3. TỔNG TIỀN HIỆN CÓ (VÍ + THẺ) */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50/50 to-white border border-emerald-200/90 shadow-2xs">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <Sparkle size={14} weight="fill" />
-                </div>
-                <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
-                  Tổng Tiền Hiện Có
-                </span>
-              </div>
-              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 px-1.5 py-0.2 rounded">
-                Ví + Thẻ
-              </span>
-            </div>
-
-            <div className="text-lg sm:text-xl font-extrabold text-emerald-800 tabular-nums font-money py-0.5">
-              {formatMoney(tongTienHienCo)}
-            </div>
-
-            <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-1 mt-0.5 flex-wrap">
-              <span>{currentMonthLabel}:</span>
-              <strong className={netBalance >= 0 ? 'text-emerald-800' : 'text-rose-600'}>
-                {netBalance >= 0 ? '+' : ''}{formatMoney(netBalance)}
-              </strong>
-              <span className="text-[9px] text-slate-400 font-normal">
-                (Thu: +{formatMoney(totalThu)}, Chi: -{formatMoney(totalChi)})
-              </span>
-            </span>
-          </div>
-
         </div>
       </div>
 

@@ -108,7 +108,6 @@ export default function QuickEntry({
       ngay: getInitialDate(),
       gio: getCurrentTime(),
       vault: item.vault || (activeVault === 'all' ? 'shared' : activeVault),
-      wallet_source: item.defaultWallet || (item.amount < 100000 ? 'cash' : 'card'),
       ghi_chu: 'Thêm nhanh thường dùng'
     });
   };
@@ -134,7 +133,6 @@ export default function QuickEntry({
       phan_loai: confirmingQuickItem.phan_loai,
       loai: confirmingQuickItem.loai,
       vault: confirmingQuickItem.vault,
-      wallet_source: confirmingQuickItem.wallet_source || 'card',
       author: authorName,
       ghi_chu: confirmingQuickItem.ghi_chu || 'Thêm nhanh thường dùng'
     };
@@ -296,36 +294,6 @@ export default function QuickEntry({
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
-              </div>
-
-
-              {/* Nguồn tiền */}
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Nguồn tiền:</span>
-                <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-white">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingQuickItem({ ...confirmingQuickItem, wallet_source: 'cash' })}
-                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
-                      confirmingQuickItem.wallet_source === 'cash'
-                        ? 'bg-amber-100 text-amber-900 font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    💵 Ví tiền mặt
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingQuickItem({ ...confirmingQuickItem, wallet_source: 'card' })}
-                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
-                      confirmingQuickItem.wallet_source === 'card'
-                        ? 'bg-blue-100 text-blue-900 font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    💳 Thẻ ngân hàng
-                  </button>
-                </div>
               </div>
 
               {/* Ngày ghi */}
