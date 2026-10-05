@@ -48,24 +48,38 @@ export default function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 md:px-8 py-2.5 md:py-3">
+    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-pink-200/90 px-3 md:px-8 py-2.5 md:py-3 shadow-xs shadow-pink-100/30">
       <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
         
         {/* Tên ứng dụng */}
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
-          <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-emerald-700 flex items-center justify-center text-white font-bold text-xs md:text-sm shadow-xs">
-            NT
+          {/* Logo NT nằm trong trái tim màu hồng */}
+          <div className="relative flex items-center justify-center shrink-0 w-9 h-9 md:w-10 md:h-10 transition-transform hover:scale-105" title="Nhựt & Trang">
+            <svg viewBox="0 0 32 32" className="w-full h-full drop-shadow-xs" fill="url(#pinkHeartHeader)">
+              <defs>
+                <linearGradient id="pinkHeartHeader" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#FB7185" />
+                  <stop offset="50%" stopColor="#EC4899" />
+                  <stop offset="100%" stopColor="#E11D48" />
+                </linearGradient>
+              </defs>
+              <path d="M16 28.5C15.5 28.5 15 28.3 14.6 28C13.2 26.9 2 17.8 2 10.5C2 5.8 5.8 2 10.5 2C13.2 2 15.6 3.2 16 3.5C16.4 3.2 18.8 2 21.5 2C26.2 2 30 5.8 30 10.5C30 17.8 18.8 26.9 17.4 28C17 28.3 16.5 28.5 16 28.5Z" />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center pb-0.5 text-white font-black text-xs md:text-[13px] tracking-tight font-sans select-none drop-shadow-xs">
+              NT
+            </span>
           </div>
+
           <div>
             <div className="flex items-center gap-1.5">
               <h1 className="text-sm md:text-base font-bold text-slate-900 tracking-tight leading-tight">
                 Thu Chi <span className="hidden sm:inline">Gia Đình</span>
               </h1>
-              <span className="text-[10px] md:text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 hidden sm:inline-block">
-                Nhựt & Trang
+              <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200 hidden sm:inline-block">
+                Nhựt & Trang 💕
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 font-medium hidden md:block">
+            <p className="text-[10px] text-pink-700/70 font-medium hidden md:block">
               Quản lý tài chính {currentMonth && currentMonth.includes('-') ? `tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : 'gia đình'}
             </p>
           </div>

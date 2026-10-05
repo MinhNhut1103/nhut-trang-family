@@ -381,12 +381,12 @@ export default function TransactionList({
 
   return (
     <section className="w-full max-w-5xl mx-auto px-4 md:px-8 pb-10">
-      <div className="card-soft overflow-hidden">
+      <div className="card-soft overflow-hidden border border-pink-200/90 shadow-xs shadow-pink-100/30">
         
         {/* ========================================================= */}
         {/* THANH CÔNG CỤ THEO DẠNG HÀNG 100% TRỰC QUAN CHO MOBILE */}
         {/* ========================================================= */}
-        <div className="p-3.5 sm:p-4 bg-slate-50/90 border-b border-slate-200/90 space-y-2.5">
+        <div className="p-3.5 sm:p-4 bg-gradient-to-r from-pink-50/40 via-white to-pink-50/20 border-b border-pink-200/80 space-y-2.5">
           
           {/* HÀNG 1: NÚT HÀNH ĐỘNG CHÍNH - THÊM THU CHI (100% WIDTH TRÊN MOBILE) */}
           <div className="w-full flex items-center justify-between gap-2">
@@ -409,7 +409,7 @@ export default function TransactionList({
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="Tìm nội dung, người ghi, ghi chú, số tiền..."
-              className="w-full pl-10 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-2xs font-normal"
+              className="w-full pl-10 pr-9 py-2.5 bg-white border border-pink-200/90 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/10 shadow-2xs font-normal"
             />
             {searchKeyword && (
               <button
@@ -534,35 +534,35 @@ export default function TransactionList({
           </div>
 
           {/* HÀNG CÔNG CỤ PHỤ (DANH MỤC, XEM BẢNG/THẺ, XUẤT FILE) - CHIA 3 CỘT ĐỀU ĐẸP MẮT */}
-          <div className="w-full grid grid-cols-3 gap-2 pt-1 border-t border-slate-200/70">
+          <div className="w-full grid grid-cols-3 gap-2 pt-1 border-t border-pink-200/70">
             <button
               onClick={onOpenCategoryManager}
-              className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors"
+              className="w-full py-2 bg-white hover:bg-pink-50/50 border border-pink-200/80 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors"
               title="Quản lý danh sách phân loại & loại"
             >
-              <SlidersHorizontal size={15} className="text-emerald-700 shrink-0" />
+              <SlidersHorizontal size={15} className="text-pink-700 shrink-0" />
               <span>Danh mục</span>
             </button>
 
             <button
               onClick={() => setMobileView(mobileView === 'table' ? 'cards' : 'table')}
-              className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors"
+              className="w-full py-2 bg-white hover:bg-pink-50/50 border border-pink-200/80 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors"
               title="Chuyển chế độ xem Thẻ / Bảng"
             >
               {mobileView === 'table' ? (
-                <ListBullets size={15} className="text-emerald-700 shrink-0" />
+                <ListBullets size={15} className="text-pink-700 shrink-0" />
               ) : (
-                <Table size={15} className="text-emerald-700 shrink-0" />
+                <Table size={15} className="text-pink-700 shrink-0" />
               )}
               <span>{mobileView === 'table' ? 'Dạng thẻ' : 'Dạng bảng'}</span>
             </button>
 
             <button
               onClick={handleExportCSV}
-              className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors"
+              className="w-full py-2 bg-white hover:bg-pink-50/50 border border-pink-200/80 rounded-xl text-slate-700 tactile-btn flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors"
               title="Xuất dữ liệu ra Excel CSV"
             >
-              <DownloadSimple size={15} className="text-emerald-700 shrink-0" />
+              <DownloadSimple size={15} className="text-pink-700 shrink-0" />
               <span>Xuất Excel</span>
             </button>
           </div>
@@ -632,10 +632,31 @@ export default function TransactionList({
 
                         {/* Nội dung */}
                         <td className="py-2.5 px-3.5 font-medium text-slate-800">
-                          <div>{tx.noi_dung}</div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{tx.noi_dung}</span>
+                            {tx.wallet_source === 'cash' || tx.ghi_chu?.includes('[Tiền mặt]') ? (
+                              <button
+                                type="button"
+                                onClick={() => onUpdateTransaction && onUpdateTransaction(tx.id, 'wallet_source', 'card')}
+                                className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/80 cursor-pointer transition-colors"
+                                title="Đang tính vào Tiền ngoài ví (Tiền mặt). Bấm để chuyển sang Tiền trong thẻ"
+                              >
+                                💵 Ví
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onUpdateTransaction && onUpdateTransaction(tx.id, 'wallet_source', 'cash')}
+                                className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200/80 cursor-pointer transition-colors"
+                                title="Đang tính vào Tiền trong thẻ (Ngân hàng). Bấm để chuyển sang Tiền ngoài ví"
+                              >
+                                💳 Thẻ
+                              </button>
+                            )}
+                          </div>
                           {tx.ghi_chu && (
                             <div className="text-[11px] text-slate-400 font-normal mt-0.5">
-                              {tx.ghi_chu}
+                              {tx.ghi_chu.replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim()}
                             </div>
                           )}
                         </td>
@@ -718,8 +739,8 @@ export default function TransactionList({
 
               {/* Dòng tổng cộng */}
               <tfoot>
-                <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800">
-                  <td colSpan="2" className="py-3 px-3.5 text-right uppercase text-[11px] tracking-wider text-slate-500">
+                <tr className="bg-pink-50/50 font-bold border-t border-pink-200 text-slate-800">
+                  <td colSpan="2" className="py-3 px-3.5 text-right uppercase text-[11px] tracking-wider text-pink-900/60">
                     Tổng cộng:
                   </td>
                   <td className="py-3 px-3.5 text-right tabular-nums text-emerald-700 font-bold">
@@ -752,14 +773,14 @@ export default function TransactionList({
                 </button>
               </div>
             ) : (
-              <div className="p-3 sm:p-4 space-y-2.5 bg-slate-50/50">
+              <div className="p-3 sm:p-4 space-y-2.5 bg-pink-50/20">
                 {filteredList.map((tx) => {
                   const isThu = (tx.thu || 0) > 0;
                   const catMeta = getCategoryIcon(tx.phan_loai, isThu);
                   return (
                     <div 
                       key={tx.id} 
-                      className="p-3.5 bg-white hover:bg-slate-50/80 border border-slate-200/90 rounded-2xl shadow-2xs space-y-2.5 transition-all"
+                      className="p-3.5 bg-white hover:bg-pink-50/20 border border-pink-200/90 rounded-2xl shadow-xs shadow-pink-100/30 space-y-2.5 transition-all"
                     >
                       {/* HÀNG TRÊN: ICON PHÂN LOẠI + TIÊU ĐỀ RỘNG RÃI KHÔNG BỊ CẮT CHỮ */}
                       <div className="flex items-start gap-3">
@@ -768,12 +789,33 @@ export default function TransactionList({
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-1">
-                          <h4 className="text-sm font-bold text-slate-800 leading-snug break-words">
-                            {tx.noi_dung}
-                          </h4>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="text-sm font-bold text-slate-800 leading-snug break-words">
+                              {tx.noi_dung}
+                            </h4>
+                            {tx.wallet_source === 'cash' || tx.ghi_chu?.includes('[Tiền mặt]') ? (
+                              <button
+                                type="button"
+                                onClick={() => onUpdateTransaction && onUpdateTransaction(tx.id, 'wallet_source', 'card')}
+                                className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/80 cursor-pointer transition-colors"
+                                title="Đang tính vào Tiền ngoài ví (Tiền mặt). Bấm để chuyển sang Tiền trong thẻ"
+                              >
+                                💵 Ví
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onUpdateTransaction && onUpdateTransaction(tx.id, 'wallet_source', 'cash')}
+                                className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200/80 cursor-pointer transition-colors"
+                                title="Đang tính vào Tiền trong thẻ (Ngân hàng). Bấm để chuyển sang Tiền ngoài ví"
+                              >
+                                💳 Thẻ
+                              </button>
+                            )}
+                          </div>
                           {tx.ghi_chu && (
                             <p className="text-xs text-slate-500 font-normal break-words">
-                              {tx.ghi_chu}
+                              {tx.ghi_chu.replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim()}
                             </p>
                           )}
                           <div className="flex items-center gap-1.5 flex-wrap pt-0.5">

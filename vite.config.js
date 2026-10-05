@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
     ],
+    server: {
+      host: true,
+      port: 5173,
+    },
     envPrefix: ['VITE_', 'NEXT_PUBLIC_', 'SUPABASE_'],
     define: {
       '__VITE_INJECTED_SUPABASE_URL__': JSON.stringify(supabaseUrl),

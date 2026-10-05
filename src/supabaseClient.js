@@ -57,11 +57,19 @@ export async function getTransactions() {
     }
     return null;
   }
-  return data;
+  return data.map((t) => ({
+    ...t,
+    wallet_source: t.ghi_chu?.includes('[Tiền mặt]') ? 'cash' : 'card'
+  }));
 }
 
 export async function addTransaction(transaction) {
   if (!supabase) return null;
+
+  const walletSource = transaction.wallet_source || 'card';
+  const tag = walletSource === 'cash' ? '[Tiền mặt]' : '[Thẻ NH]';
+  let cleanNote = (transaction.ghi_chu || '').replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim();
+  const finalNote = cleanNote ? `${tag} ${cleanNote}` : tag;
 
   // Sanitize payload chỉ gửi các cột chuẩn
   const payload = {
@@ -74,7 +82,7 @@ export async function addTransaction(transaction) {
     loai: transaction.loai || 'thiết yếu',
     vault: transaction.vault || 'shared',
     author: transaction.author || 'Nhựt',
-    ghi_chu: transaction.ghi_chu || ''
+    ghi_chu: finalNote
   };
   if (transaction.gio) {
     payload.gio = transaction.gio;
@@ -100,7 +108,7 @@ export async function addTransaction(transaction) {
     console.error('Error inserting transaction to Supabase:', error);
     throw error;
   }
-  return data ? data[0] : null;
+  return data ? { ...data[0], wallet_source: walletSource } : null;
 }
 
 export async function deleteTransaction(id) {
@@ -127,6 +135,12 @@ export async function updateTransaction(id, updates) {
       payload[k] = updates[k];
     }
   });
+
+  if (updates.wallet_source) {
+    const tag = updates.wallet_source === 'cash' ? '[Tiền mặt]' : '[Thẻ NH]';
+    let cleanNote = (payload.ghi_chu || '').replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim();
+    payload.ghi_chu = cleanNote ? `${tag} ${cleanNote}` : tag;
+  }
 
   if (payload.thu !== undefined) payload.thu = Number(payload.thu) || 0;
   if (payload.chi !== undefined) payload.chi = Number(payload.chi) || 0;
@@ -197,19 +211,77 @@ export async function upsertMonthlyConfig(config) {
     ghi_chu: config.ghi_chu || '',
     updated_at: new Date().toISOString()
   };
+  if (config.tien_ngoai_vi !== undefined) {
+    payload.tien_ngoai_vi = Number(config.tien_ngoai_vi) || 0;
+  }
+  if (config.tien_trong_the !== undefined) {
+    payload.tien_trong_the = Number(config.tien_trong_the) || 0;
+  }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('monthly_config')
     .upsert(payload)
     .select();
   
+  // Fallback an toàn nếu database chưa có sẵn cột tien_ngoai_vi hoặc tien_trong_the
+  if (error && (error.code === 'PGRST204' || error.message?.includes('tien_'))) {
+    delete payload.tien_ngoai_vi;
+    delete payload.tien_trong_the;
+    const retry = await supabase
+      .from('monthly_config')
+      .upsert(payload)
+      .select();
+    data = retry.data;
+    error = retry.error;
+  }
+
   if (error) {
     if (!isSchemaMissing(error)) {
       console.error('Error upserting monthly config:', error);
     }
     throw error;
   }
-  return data[0];
+  return data ? data[0] : null;
+}
+
+// Helper quản lý Số tiền hiện có toàn cục (Ví tiền mặt & Thẻ ngân hàng)
+export async function getGlobalWallets() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('monthly_config')
+    .select('tien_ngoai_vi, tien_trong_the')
+    .eq('id', 'global_wallets')
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    return null;
+  }
+  return data;
+}
+
+export async function upsertGlobalWallets(wallets) {
+  if (!supabase) return null;
+  const payload = {
+    id: 'global_wallets',
+    banner_focus: 'Số tiền hiện có (Ví & Thẻ)',
+    tien_ngoai_vi: Number(wallets.tien_ngoai_vi) || 0,
+    tien_trong_the: Number(wallets.tien_trong_the) || 0,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    const { data, error } = await supabase
+      .from('monthly_config')
+      .upsert(payload)
+      .select();
+    if (error) {
+      console.warn('Không thể lưu global_wallets lên Supabase:', error);
+      return null;
+    }
+    return data ? data[0] : null;
+  } catch (e) {
+    console.warn('Lỗi upsertGlobalWallets:', e);
+    return null;
+  }
 }
 
 export async function updateMonthlyFocus(monthId = '2026-10', focusText) {
@@ -385,6 +457,8 @@ export async function syncAllLocalToSupabase({ transactions = [], monthlyConfigs
       banner_focus: c.banner_focus || '',
       han_muc_chi: Number(c.han_muc_chi) || 30000000,
       ghi_chu: c.ghi_chu || '',
+      tien_ngoai_vi: Number(c.tien_ngoai_vi) || 0,
+      tien_trong_the: Number(c.tien_trong_the) || 0,
       updated_at: new Date().toISOString()
     }));
     const { error: confErr } = await supabase.from('monthly_config').upsert(confPayload);

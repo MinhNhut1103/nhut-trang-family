@@ -68,24 +68,36 @@ export default function LoginForm({ members, onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center items-center px-4 py-8">
+    <div className="min-h-screen bg-[#FFF8FA] flex flex-col justify-center items-center px-4 py-8">
       <div className="w-full max-w-md">
         
         {/* Logo & Tiêu đề */}
         <div className="text-center mb-6">
-          <div className="inline-flex w-12 h-12 rounded-2xl bg-emerald-700 items-center justify-center text-white font-bold text-lg shadow-sm mb-3">
-            NT
+          <div className="relative inline-flex items-center justify-center shrink-0 w-16 h-16 mb-2 transition-transform hover:scale-105">
+            <svg viewBox="0 0 32 32" className="w-full h-full drop-shadow-sm" fill="url(#pinkHeartLogin)">
+              <defs>
+                <linearGradient id="pinkHeartLogin" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#FB7185" />
+                  <stop offset="50%" stopColor="#EC4899" />
+                  <stop offset="100%" stopColor="#E11D48" />
+                </linearGradient>
+              </defs>
+              <path d="M16 28.5C15.5 28.5 15 28.3 14.6 28C13.2 26.9 2 17.8 2 10.5C2 5.8 5.8 2 10.5 2C13.2 2 15.6 3.2 16 3.5C16.4 3.2 18.8 2 21.5 2C26.2 2 30 5.8 30 10.5C30 17.8 18.8 26.9 17.4 28C17 28.3 16.5 28.5 16 28.5Z" />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center pb-1 text-white font-black text-lg md:text-xl tracking-tight font-sans select-none drop-shadow-xs">
+              NT
+            </span>
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
             Sổ Thu Chi Gia Đình
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Đăng nhập tài khoản để vào sổ ghi chép thu chi
+          <p className="text-xs text-pink-700/70 font-medium mt-1">
+            Đăng nhập tài khoản để vào sổ ghi chép thu chi Nhựt & Trang 💕
           </p>
         </div>
 
-        {/* Khối Form Đăng nhập */}
-        <div className="card-soft p-6 md:p-8 bg-white border border-slate-200/90 shadow-sm">
+        {/* Khối Form Đăng nhập với viền hồng nữ tính */}
+        <div className="card-soft p-6 md:p-8 bg-white border border-pink-200/90 shadow-sm shadow-pink-100/50">
           
           <form onSubmit={handleLogin} className="space-y-4">
             

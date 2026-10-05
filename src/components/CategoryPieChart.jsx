@@ -152,12 +152,12 @@ export default function CategoryPieChart({
 
   return (
     <section className="w-full max-w-5xl mx-auto px-4 md:px-8">
-      <div className="card-soft p-4 md:p-5 border border-slate-200/90 shadow-2xs">
+      <div className="card-soft p-4 md:p-5 border border-pink-200/90 shadow-xs shadow-pink-100/30">
         
         {/* TIÊU ĐỀ & CHỌN LOẠI THU / CHI */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-pink-100/80">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+            <div className="w-8 h-8 rounded-xl bg-pink-50 text-pink-700 flex items-center justify-center shrink-0 border border-pink-200/80">
               <ChartPieSlice size={18} weight="duotone" />
             </div>
             <div>
@@ -175,7 +175,7 @@ export default function CategoryPieChart({
 
           <div className="flex items-center gap-1.5 self-end sm:self-auto">
             {/* Toggle Thu / Chi */}
-            <div className="inline-flex rounded-xl p-0.5 bg-slate-100 border border-slate-200/80 text-xs">
+            <div className="inline-flex rounded-xl p-0.5 bg-pink-50/50 border border-pink-200/80 text-xs">
               <button
                 type="button"
                 onClick={() => { setViewType('chi'); setHoveredCategory(null); }}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Check, X } from '@phosphor-icons/react';
+import { Plus, Check, X, Money, CreditCard } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList, getCurrentTime, formatDateDisplay } from '../data/initialData';
 
 export default function QuickEntry({ 
@@ -108,6 +108,7 @@ export default function QuickEntry({
       ngay: getInitialDate(),
       gio: getCurrentTime(),
       vault: item.vault || (activeVault === 'all' ? 'shared' : activeVault),
+      wallet_source: item.defaultWallet || (item.amount < 100000 ? 'cash' : 'card'),
       ghi_chu: 'Thêm nhanh thường dùng'
     });
   };
@@ -128,17 +129,17 @@ export default function QuickEntry({
       ngay: confirmingQuickItem.ngay,
       gio: confirmingQuickItem.gio,
       noi_dung: confirmingQuickItem.label,
-      thu: confirmingQuickItem.type === 'thu' ? num : 0,
-      chi: confirmingQuickItem.type === 'chi' ? num : 0,
+      thu: confirmingQuickItem.isIncome || confirmingQuickItem.type === 'thu' ? num : 0,
+      chi: !confirmingQuickItem.isIncome && confirmingQuickItem.type !== 'thu' ? num : 0,
       phan_loai: confirmingQuickItem.phan_loai,
       loai: confirmingQuickItem.loai,
       vault: confirmingQuickItem.vault,
+      wallet_source: confirmingQuickItem.wallet_source || 'card',
       author: authorName,
       ghi_chu: confirmingQuickItem.ghi_chu || 'Thêm nhanh thường dùng'
     };
 
     onAddTransaction(newTx);
-    onShowToast(`Đã thêm: ${newTx.noi_dung} (${new Intl.NumberFormat('vi-VN').format(num)} đ)`);
     setConfirmingQuickItem(null);
   };
 
@@ -179,11 +180,11 @@ export default function QuickEntry({
               </div>
             ) : (
               quickList.map((item, idx) => (
-                <div key={idx} className="inline-flex items-center group shadow-2xs rounded-xl overflow-hidden border border-slate-200 hover:border-emerald-300 transition-colors">
+                <div key={idx} className="inline-flex items-center group shadow-2xs rounded-xl overflow-hidden border border-pink-200 hover:border-pink-400 transition-colors">
                   <button
                     type="button"
                     onClick={() => handleOpenQuickConfirm(item)}
-                    className="px-3 py-1.5 bg-white hover:bg-emerald-50/70 text-slate-700 hover:text-emerald-800 text-xs font-medium tactile-btn transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-white hover:bg-pink-50/70 text-slate-700 hover:text-pink-800 text-xs font-medium tactile-btn transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     <span>{item.label}</span>
                     <span className="font-bold text-slate-900 tabular-nums font-money">
@@ -193,7 +194,7 @@ export default function QuickEntry({
                   <button
                     type="button"
                     onClick={() => handleDeletePreset(idx)}
-                    className="px-2 py-1.5 bg-slate-50 hover:bg-rose-50 hover:text-rose-600 border-l border-slate-200/80 text-slate-400 text-xs transition-colors"
+                    className="px-2 py-1.5 bg-pink-50/40 hover:bg-rose-50 hover:text-rose-600 border-l border-pink-200/80 text-slate-400 text-xs transition-colors"
                     title="Xóa mục này"
                   >
                     <X size={12} weight="bold" />
@@ -213,7 +214,7 @@ export default function QuickEntry({
           onClick={() => setConfirmingQuickItem(null)}
         >
           <div 
-            className="w-full max-w-sm bg-white p-5 rounded-2xl border border-slate-200 shadow-xl space-y-4"
+            className="w-full max-w-sm bg-white p-5 rounded-2xl border border-pink-200/90 shadow-xl shadow-pink-100/40 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header Popup */}
@@ -298,6 +299,35 @@ export default function QuickEntry({
               </div>
 
 
+              {/* Nguồn tiền */}
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Nguồn tiền:</span>
+                <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingQuickItem({ ...confirmingQuickItem, wallet_source: 'cash' })}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                      confirmingQuickItem.wallet_source === 'cash'
+                        ? 'bg-amber-100 text-amber-900 font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    💵 Ví tiền mặt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingQuickItem({ ...confirmingQuickItem, wallet_source: 'card' })}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                      confirmingQuickItem.wallet_source === 'card'
+                        ? 'bg-blue-100 text-blue-900 font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    💳 Thẻ ngân hàng
+                  </button>
+                </div>
+              </div>
+
               {/* Ngày ghi */}
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">Ngày ghi:</span>
@@ -344,7 +374,7 @@ export default function QuickEntry({
           onClick={() => setIsAddingPreset(false)}
         >
           <div 
-            className="w-full max-w-sm bg-white p-5 rounded-2xl border border-slate-200 shadow-xl space-y-4"
+            className="w-full max-w-sm bg-white p-5 rounded-2xl border border-pink-200/90 shadow-xl shadow-pink-100/40 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">

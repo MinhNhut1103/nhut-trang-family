@@ -93,7 +93,7 @@ export default function CategoryManagerModal({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-md bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4"
+        className="w-full max-w-md bg-white p-5 md:p-6 rounded-2xl border border-pink-200/90 shadow-xl shadow-pink-100/40 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         

@@ -9,7 +9,8 @@ export default function MonthManagerModal({
   monthlyConfigs = {},
   onSaveMonthlyConfig,
   availableMonths = [],
-  onAddMonth
+  onAddMonth,
+  currentFunds = { tien_ngoai_vi: 0, tien_trong_the: 0 }
 }) {
   const [activeTabMonth, setActiveTabMonth] = useState(currentMonth);
   const [newMonthInput, setNewMonthInput] = useState('');
@@ -43,15 +44,16 @@ export default function MonthManagerModal({
   }, [isOpen, currentMonth]);
 
   useEffect(() => {
+    if (!isOpen) return;
     const config = monthlyConfigs[activeTabMonth] || {};
     setFormData({
       ghi_chu: config.ghi_chu || '',
       banner_focus: config.banner_focus || '',
       han_muc_chi: config.han_muc_chi || 30000000,
-      tien_ngoai_vi: config.tien_ngoai_vi || 0,
-      tien_trong_the: config.tien_trong_the || 0
+      tien_ngoai_vi: currentFunds?.tien_ngoai_vi ?? (config.tien_ngoai_vi || 0),
+      tien_trong_the: currentFunds?.tien_trong_the ?? (config.tien_trong_the || 0)
     });
-  }, [activeTabMonth, monthlyConfigs]);
+  }, [isOpen, activeTabMonth, monthlyConfigs, currentFunds]);
 
   if (!isOpen) return null;
 
@@ -99,7 +101,7 @@ export default function MonthManagerModal({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-lg bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4 max-h-[92vh] overflow-y-auto"
+        className="w-full max-w-lg bg-white p-5 md:p-6 rounded-2xl border border-pink-200/90 shadow-xl shadow-pink-100/40 space-y-4 max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
@@ -232,25 +234,7 @@ export default function MonthManagerModal({
             />
           </div>
 
-          {/* 3. Hạn mức chi tiêu tháng */}
-          <div>
-            <label className="block text-slate-600 font-semibold mb-1 flex items-center gap-1.5">
-              <CurrencyDollar size={14} className="text-emerald-700" weight="bold" />
-              <span>Hạn mức chi tiêu dự kiến (đ):</span>
-            </label>
-            <div className="relative max-w-xs">
-              <input
-                type="number"
-                placeholder="30000000"
-                value={formData.han_muc_chi}
-                onChange={(e) => setFormData({ ...formData, han_muc_chi: e.target.value })}
-                className="w-full py-2 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:outline-none focus:bg-white focus:border-emerald-500 tabular-nums"
-              />
-              <span className="absolute right-3 top-2 text-xs text-slate-400 font-semibold">đ</span>
-            </div>
-          </div>
-
-          {/* 4. Tiền ngoài ví & Tiền trong thẻ (Thủ công) */}
+          {/* 3. Số tiền hiện có (Tiền ngoài ví & Tiền trong thẻ) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             {/* Tiền ngoài ví */}
             <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-200/80">
@@ -269,7 +253,7 @@ export default function MonthManagerModal({
                 <span className="absolute right-3 top-2 text-xs text-amber-600 font-semibold">đ</span>
               </div>
               <p className="text-[10px] text-amber-700/80 mt-1">
-                Tiền mặt có sẵn bên ngoài trong tháng.
+                Tiền mặt khả dụng hiện có trong ví.
               </p>
             </div>
 
@@ -290,7 +274,7 @@ export default function MonthManagerModal({
                 <span className="absolute right-3 top-2 text-xs text-blue-600 font-semibold">đ</span>
               </div>
               <p className="text-[10px] text-blue-700/80 mt-1">
-                Số dư tài khoản ngân hàng / thẻ ATM.
+                Số dư tài khoản ngân hàng / thẻ ATM hiện có.
               </p>
             </div>
           </div>

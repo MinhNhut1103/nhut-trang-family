@@ -4,6 +4,7 @@ import BudgetPulse from './components/BudgetPulse';
 import CategoryPieChart from './components/CategoryPieChart';
 import QuickEntry from './components/QuickEntry';
 import TransactionList from './components/TransactionList';
+import FloatingAmbience from './components/FloatingAmbience';
 import { 
   initialTransactions, 
   initialProfile, 
@@ -34,7 +35,9 @@ import {
   addFamilyMember,
   updateFamilyMember,
   deleteFamilyMember,
-  syncAllLocalToSupabase
+  syncAllLocalToSupabase,
+  getGlobalWallets,
+  upsertGlobalWallets
 } from './supabaseClient';
 import CategoryManagerModal from './components/CategoryManagerModal';
 import MemberManagerModal from './components/MemberManagerModal';
@@ -56,6 +59,27 @@ export default function App() {
   });
 
   const [privacyMode, setPrivacyMode] = useState(false);
+
+  // SỐ TIỀN HIỆN CÓ: Tiền ngoài ví (tiền mặt) & Tiền trong thẻ (ngân hàng)
+  // Khởi tạo ngay lập tức từ localStorage để F5 không bao giờ bị nhảy về 0
+  const [currentFunds, setCurrentFunds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nt_current_funds');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && (parsed.tien_ngoai_vi !== undefined || parsed.tien_trong_the !== undefined)) {
+          return {
+            tien_ngoai_vi: Number(parsed.tien_ngoai_vi) || 0,
+            tien_trong_the: Number(parsed.tien_trong_the) || 0
+          };
+        }
+      }
+    } catch (e) {}
+    return {
+      tien_ngoai_vi: 0,
+      tien_trong_the: 0
+    };
+  });
 
   // Lấy tháng hiện tại thực tế theo lịch (YYYY-MM)
   const getSystemCurrentMonth = () => {
@@ -154,6 +178,13 @@ export default function App() {
 
   const [toastMessage, setToastMessage] = useState(null);
 
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 2800);
+  };
+
   // 2. Tự động đồng bộ Supabase Cloud nếu đã cấu hình
   useEffect(() => {
     if (isSupabaseConfigured) {
@@ -182,6 +213,36 @@ export default function App() {
               tien_trong_the: Number(c.tien_trong_the) || 0
             };
           });
+
+          // Phục hồi Số Tiền Hiện Có (ưu tiên từ bản ghi global_wallets hoặc tháng mới nhất)
+          const globalWallet = cloudConfigs.find((c) => c.id === 'global_wallets');
+          if (globalWallet && (Number(globalWallet.tien_ngoai_vi) > 0 || Number(globalWallet.tien_trong_the) > 0)) {
+            const nextFunds = {
+              tien_ngoai_vi: Number(globalWallet.tien_ngoai_vi) || 0,
+              tien_trong_the: Number(globalWallet.tien_trong_the) || 0
+            };
+            setCurrentFunds(nextFunds);
+            try {
+              localStorage.setItem('nt_current_funds', JSON.stringify(nextFunds));
+            } catch (e) {}
+          } else {
+            const sortedMonths = [...cloudConfigs]
+              .filter((c) => c.id !== 'global_wallets')
+              .sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+            const latestWithFunds = sortedMonths.find(
+              (c) => Number(c.tien_ngoai_vi) > 0 || Number(c.tien_trong_the) > 0
+            );
+            if (latestWithFunds) {
+              const nextFunds = {
+                tien_ngoai_vi: Number(latestWithFunds.tien_ngoai_vi) || 0,
+                tien_trong_the: Number(latestWithFunds.tien_trong_the) || 0
+              };
+              setCurrentFunds(nextFunds);
+              try {
+                localStorage.setItem('nt_current_funds', JSON.stringify(nextFunds));
+              } catch (e) {}
+            }
+          }
         }
 
         // Tự động kiểm tra: Nếu là ngày 1 (hoặc tháng hiện tại chưa có), tự động tạo cấu hình tháng mới
@@ -248,10 +309,13 @@ export default function App() {
           tien_trong_the: 0
         };
 
-        setMonthlyConfigs((prev) => ({
-          ...prev,
-          [sysMonth]: newMonthObj
-        }));
+        setMonthlyConfigs((prev) => {
+          if (prev[sysMonth]) return prev;
+          return {
+            ...prev,
+            [sysMonth]: newMonthObj
+          };
+        });
 
         if (isSupabaseConfigured) {
           try {
@@ -280,77 +344,61 @@ export default function App() {
     };
   }, [monthlyConfigs]);
 
-  // 3. Bảo mật tuyệt đối: Luôn xóa sạch 100% localStorage của trình duyệt, không lưu trữ bất kỳ dữ liệu nào trên máy
-  useEffect(() => {
+  // Hàm lưu và đồng bộ Số Tiền Hiện Có bền vững (vừa lưu localStorage vừa lưu Supabase)
+  const updateFundsAndPersist = (newFunds) => {
+    setCurrentFunds(newFunds);
     try {
-      localStorage.clear();
-    } catch (e) {
-      console.warn('Không thể xóa localStorage:', e);
+      localStorage.setItem('nt_current_funds', JSON.stringify(newFunds));
+    } catch (e) {}
+    if (isSupabaseConfigured) {
+      upsertGlobalWallets(newFunds).catch(console.error);
+      const updatedCfg = {
+        ...(monthlyConfigs[currentMonth] || { id: currentMonth }),
+        tien_ngoai_vi: newFunds.tien_ngoai_vi,
+        tien_trong_the: newFunds.tien_trong_the
+      };
+      upsertMonthlyConfig(updatedCfg).catch(console.error);
     }
-  }, []);
-
-  // Thông báo nhẹ
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 2800);
   };
 
-  // Quản lý tháng & ghi chú riêng cho từng tháng
+  const handleUpdateTienNgoaiVi = (val) => {
+    const num = Number(val) || 0;
+    const next = { ...currentFunds, tien_ngoai_vi: num };
+    updateFundsAndPersist(next);
+    showToast(`Đã lưu tiền ngoài ví: ${new Intl.NumberFormat('vi-VN').format(num)} đ`);
+  };
+
+  const handleUpdateTienTrongThe = (val) => {
+    const num = Number(val) || 0;
+    const next = { ...currentFunds, tien_trong_the: num };
+    updateFundsAndPersist(next);
+    showToast(`Đã lưu tiền trong thẻ: ${new Intl.NumberFormat('vi-VN').format(num)} đ`);
+  };
+
   const handleSaveMonthlyConfig = async (newConfig) => {
     setMonthlyConfigs((prev) => ({
       ...prev,
       [newConfig.id]: newConfig
     }));
-    showToast(`Đã lưu ghi chú Tháng ${newConfig.id}`);
+
+    if (newConfig.tien_ngoai_vi !== undefined || newConfig.tien_trong_the !== undefined) {
+      const nextFunds = {
+        tien_ngoai_vi: newConfig.tien_ngoai_vi !== undefined ? Number(newConfig.tien_ngoai_vi) : currentFunds.tien_ngoai_vi,
+        tien_trong_the: newConfig.tien_trong_the !== undefined ? Number(newConfig.tien_trong_the) : currentFunds.tien_trong_the,
+      };
+      updateFundsAndPersist(nextFunds);
+    }
 
     if (isSupabaseConfigured) {
       try {
         await upsertMonthlyConfig(newConfig);
+        showToast(`Đã lưu cấu hình tháng ${newConfig.id}`);
       } catch (err) {
-        console.error('Lỗi lưu cấu hình tháng lên Supabase:', err);
+        console.error('Lỗi lưu cấu hình tháng:', err);
+        showToast('⚠️ Lỗi lưu cấu hình tháng: ' + (err.message || 'Lỗi'));
       }
-    }
-  };
-
-  const handleUpdateTienNgoaiVi = (val) => {
-    const updatedCfg = {
-      ...(monthlyConfigs[currentMonth] || { id: currentMonth }),
-      tien_ngoai_vi: Number(val) || 0
-    };
-    setMonthlyConfigs((prev) => ({
-      ...prev,
-      [currentMonth]: updatedCfg
-    }));
-    showToast(`Đã lưu tiền ngoài ví: ${new Intl.NumberFormat('vi-VN').format(val)} đ`);
-
-    if (isSupabaseConfigured) {
-      try {
-        upsertMonthlyConfig(updatedCfg);
-      } catch (err) {
-        console.error('Lỗi lưu tiền ngoài ví lên Supabase:', err);
-      }
-    }
-  };
-
-  const handleUpdateTienTrongThe = (val) => {
-    const updatedCfg = {
-      ...(monthlyConfigs[currentMonth] || { id: currentMonth }),
-      tien_trong_the: Number(val) || 0
-    };
-    setMonthlyConfigs((prev) => ({
-      ...prev,
-      [currentMonth]: updatedCfg
-    }));
-    showToast(`Đã lưu tiền trong thẻ: ${new Intl.NumberFormat('vi-VN').format(val)} đ`);
-
-    if (isSupabaseConfigured) {
-      try {
-        upsertMonthlyConfig(updatedCfg);
-      } catch (err) {
-        console.error('Lỗi lưu tiền trong thẻ lên Supabase:', err);
-      }
+    } else {
+      showToast(`Đã lưu cấu hình tháng ${newConfig.id}`);
     }
   };
 
@@ -510,25 +558,69 @@ export default function App() {
     }
   };
 
-  // Thêm giao dịch
+  // Thêm giao dịch & tự động thay đổi Số tiền hiện có (Ví / Thẻ)
   const handleAddTransaction = async (newTx) => {
     setTransactions((prev) => sortTransactionsByDateDesc([newTx, ...prev]));
+
+    // Điều chỉnh số tiền hiện có theo nguồn tiền
+    const isThu = (Number(newTx.thu) || 0) > 0;
+    const val = isThu ? Number(newTx.thu) : Number(newTx.chi);
+    const source = newTx.wallet_source || (newTx.ghi_chu?.includes('[Tiền mặt]') ? 'cash' : 'card');
+
+    const nextFunds = { ...currentFunds };
+    if (source === 'cash') {
+      nextFunds.tien_ngoai_vi = isThu 
+        ? nextFunds.tien_ngoai_vi + val 
+        : Math.max(0, nextFunds.tien_ngoai_vi - val);
+    } else {
+      nextFunds.tien_trong_the = isThu 
+        ? nextFunds.tien_trong_the + val 
+        : Math.max(0, nextFunds.tien_trong_the - val);
+    }
+    updateFundsAndPersist(nextFunds);
+
+    const sourceLabel = source === 'cash' ? 'Tiền ngoài ví' : 'Tiền trong thẻ';
+    const actionLabel = isThu 
+      ? `+${new Intl.NumberFormat('vi-VN').format(val)} đ vào ${sourceLabel}` 
+      : `-${new Intl.NumberFormat('vi-VN').format(val)} đ từ ${sourceLabel}`;
 
     if (isSupabaseConfigured) {
       try {
         await addTransaction(newTx);
-        showToast('Đã ghi vào sổ & lưu lên Supabase');
+        showToast(`Đã ghi sổ & cập nhật ${actionLabel}`);
       } catch (err) {
         console.error('Lỗi lưu Supabase:', err);
         showToast('⚠️ Không thể lưu lên Supabase: ' + (err.message || 'Lỗi'));
       }
+    } else {
+      showToast(`Đã ghi sổ & cập nhật ${actionLabel}`);
     }
   };
 
-  // Xóa giao dịch
+  // Xóa giao dịch & hoàn lại số tiền hiện có tương ứng
   const handleDeleteTransaction = async (id) => {
+    const txToDelete = transactions.find((t) => t.id === id);
+    if (txToDelete) {
+      const isThu = (Number(txToDelete.thu) || 0) > 0;
+      const val = isThu ? Number(txToDelete.thu) : Number(txToDelete.chi);
+      const source = txToDelete.wallet_source || (txToDelete.ghi_chu?.includes('[Tiền mặt]') ? 'cash' : 'card');
+
+      const nextFunds = { ...currentFunds };
+      // Hoàn lại: Nếu là chi thì cộng lại tiền vào ví/thẻ, nếu là thu thì trừ lại
+      if (source === 'cash') {
+        nextFunds.tien_ngoai_vi = isThu 
+          ? Math.max(0, nextFunds.tien_ngoai_vi - val) 
+          : nextFunds.tien_ngoai_vi + val;
+      } else {
+        nextFunds.tien_trong_the = isThu 
+          ? Math.max(0, nextFunds.tien_trong_the - val) 
+          : nextFunds.tien_trong_the + val;
+      }
+      updateFundsAndPersist(nextFunds);
+    }
+
     setTransactions((prev) => prev.filter((t) => t.id !== id));
-    showToast('Đã xóa dòng khỏi sổ');
+    showToast('Đã xóa dòng khỏi sổ & hoàn lại số tiền hiện có');
 
     if (isSupabaseConfigured) {
       try {
@@ -540,14 +632,53 @@ export default function App() {
     }
   };
 
-  // Cập nhật giao dịch (như đổi Phân loại, Loại hoặc chỉnh sửa toàn bộ trong modal)
+  // Cập nhật giao dịch & điều chỉnh lại số tiền hiện có nếu có thay đổi số tiền hoặc nguồn
   const handleUpdateTransaction = async (id, updatesOrField, value) => {
     const updates = typeof updatesOrField === 'object' ? updatesOrField : { [updatesOrField]: value };
+    const oldTx = transactions.find((t) => t.id === id);
+
+    if (oldTx && (updates.thu !== undefined || updates.chi !== undefined || updates.wallet_source !== undefined)) {
+      const oldIsThu = (Number(oldTx.thu) || 0) > 0;
+      const oldVal = oldIsThu ? Number(oldTx.thu) : Number(oldTx.chi);
+      const oldSource = oldTx.wallet_source || (oldTx.ghi_chu?.includes('[Tiền mặt]') ? 'cash' : 'card');
+
+      const newThu = updates.thu !== undefined ? Number(updates.thu) : Number(oldTx.thu);
+      const newChi = updates.chi !== undefined ? Number(updates.chi) : Number(oldTx.chi);
+      const newIsThu = newThu > 0;
+      const newVal = newIsThu ? newThu : newChi;
+      const newSource = updates.wallet_source || oldSource;
+
+      const nextFunds = { ...currentFunds };
+
+      // 1. Hoàn lại số tiền cũ
+      if (oldSource === 'cash') {
+        nextFunds.tien_ngoai_vi = oldIsThu 
+          ? Math.max(0, nextFunds.tien_ngoai_vi - oldVal) 
+          : nextFunds.tien_ngoai_vi + oldVal;
+      } else {
+        nextFunds.tien_trong_the = oldIsThu 
+          ? Math.max(0, nextFunds.tien_trong_the - oldVal) 
+          : nextFunds.tien_trong_the + oldVal;
+      }
+
+      // 2. Áp dụng số tiền mới
+      if (newSource === 'cash') {
+        nextFunds.tien_ngoai_vi = newIsThu 
+          ? nextFunds.tien_ngoai_vi + newVal 
+          : Math.max(0, nextFunds.tien_ngoai_vi - newVal);
+      } else {
+        nextFunds.tien_trong_the = newIsThu 
+          ? nextFunds.tien_trong_the + newVal 
+          : Math.max(0, nextFunds.tien_trong_the - newVal);
+      }
+
+      updateFundsAndPersist(nextFunds);
+    }
 
     setTransactions((prev) =>
       sortTransactionsByDateDesc(prev.map((t) => (t.id === id ? { ...t, ...updates } : t)))
     );
-    showToast('Đã cập nhật khoản thu chi');
+    showToast('Đã cập nhật khoản thu chi & số tiền hiện có');
 
     if (isSupabaseConfigured) {
       try {
@@ -585,7 +716,10 @@ export default function App() {
   // NẾU CHƯA ĐĂNG NHẬP: CHỈ HIỂN THỊ DUY NHẤT FORM ĐĂNG NHẬP (KHÔNG CÓ ĐĂNG KÝ, KHÔNG CÓ QUÊN MẬT KHẨU)
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="min-h-screen bg-[#FFF8FA] relative">
+        {/* Hiệu ứng bong bóng và trái tim bay lơ lửng */}
+        <FloatingAmbience />
+
         {toastMessage && (
           <div className="fixed bottom-5 right-5 z-50 animate-fade-in">
             <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-medium shadow-lg">
@@ -603,7 +737,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col justify-between">
+    <div className="min-h-screen bg-[#FFF8FA]/80 text-slate-800 flex flex-col justify-between relative">
+      {/* Hiệu ứng bong bóng và trái tim bay lơ lửng */}
+      <FloatingAmbience />
       
       {/* Thông báo nổi nhẹ */}
       {toastMessage && (
@@ -650,6 +786,7 @@ export default function App() {
         onSaveMonthlyConfig={handleSaveMonthlyConfig}
         availableMonths={availableMonths}
         onAddMonth={handleAddMonth}
+        currentFunds={currentFunds}
       />
 
       {/* Modal Thêm & Sửa Thu Chi Toàn Cục */}
@@ -701,6 +838,7 @@ export default function App() {
           onOpenMonthManager={() => setIsMonthManagerOpen(true)}
           privacyMode={privacyMode}
           availableMonths={availableMonths}
+          currentFunds={currentFunds}
           onUpdateTienNgoaiVi={handleUpdateTienNgoaiVi}
           onUpdateTienTrongThe={handleUpdateTienTrongThe}
         />
@@ -746,10 +884,11 @@ export default function App() {
       </main>
 
       {/* Chân trang */}
-      <footer className="w-full border-t border-slate-200/80 py-4 px-4 text-center text-xs text-slate-400">
+      <footer className="w-full border-t border-pink-200/80 bg-white/40 py-4 px-4 text-center text-xs text-pink-900/60">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>
-            Sổ thu chi gia đình Nhựt & Trang
+          <div className="flex items-center gap-1.5 font-medium">
+            <span>Sổ thu chi gia đình Nhựt & Trang</span>
+            <span>💕</span>
           </div>
           <div>
             Tháng {currentMonth?.includes('-') ? `${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth} • Đồng bộ Supabase
