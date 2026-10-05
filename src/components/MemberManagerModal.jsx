@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Plus, PencilSimple, Trash, Check, UserPlus, Users, Key } from '@phosphor-icons/react';
+import { X, Plus, PencilSimple, Trash, Check, UserPlus, Users, Key, ShieldCheck } from '@phosphor-icons/react';
+import { hashPin } from '../utils/crypto';
 
 export default function MemberManagerModal({
   isOpen,
@@ -17,7 +18,7 @@ export default function MemberManagerModal({
   const [formData, setFormData] = useState({
     name: '',
     username: '',
-    pin: '1234',
+    pin: '',
     role: 'Thành viên',
     color: 'emerald'
   });
@@ -42,7 +43,7 @@ export default function MemberManagerModal({
     setFormData({
       name: '',
       username: '',
-      pin: '1234',
+      pin: '',
       role: 'Thành viên',
       color: 'emerald'
     });
@@ -54,35 +55,40 @@ export default function MemberManagerModal({
     setFormData({
       name: m.name,
       username: m.username,
-      pin: m.pin || '1234',
+      pin: '',
       role: m.role || 'Thành viên',
       color: m.color || 'emerald'
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const trimmedName = formData.name.trim();
     const trimmedUser = formData.username.trim().toLowerCase();
     const trimmedPin = formData.pin.trim();
 
-    if (!trimmedName || !trimmedUser || !trimmedPin) {
-      alert('Vui lòng điền đủ Tên, Tên tài khoản và Mật khẩu/PIN!');
+    if (!trimmedName || !trimmedUser) {
+      alert('Vui lòng điền đủ Tên và Tên tài khoản!');
       return;
     }
 
     if (isAdding) {
+      if (!trimmedPin) {
+        alert('Vui lòng nhập Mật khẩu / Mã PIN cho thành viên mới!');
+        return;
+      }
       // Kiểm tra trùng username
       if (members.some(m => m.username.toLowerCase() === trimmedUser)) {
         alert('Tên tài khoản này đã tồn tại!');
         return;
       }
 
+      const pinHash = await hashPin(trimmedPin);
       onAddMember({
         id: 'm-' + Date.now(),
         name: trimmedName,
         username: trimmedUser,
-        pin: trimmedPin,
+        pin_hash: pinHash,
         role: formData.role,
         vault: `personal_${trimmedUser}`,
         color: formData.color
@@ -95,13 +101,19 @@ export default function MemberManagerModal({
         return;
       }
 
-      onUpdateMember(editingId, {
+      const updates = {
         name: trimmedName,
         username: trimmedUser,
-        pin: trimmedPin,
         role: formData.role,
         color: formData.color
-      });
+      };
+
+      // Chỉ cập nhật mật khẩu nếu người dùng nhập mật khẩu mới
+      if (trimmedPin) {
+        updates.pin_hash = await hashPin(trimmedPin);
+      }
+
+      onUpdateMember(editingId, updates);
       setEditingId(null);
     }
   };
@@ -199,7 +211,10 @@ export default function MemberManagerModal({
                           <span>•</span>
                           <span className="text-slate-600">{m.role || 'Thành viên'}</span>
                           <span>•</span>
-                          <span className="font-mono text-slate-500">Mã: {m.pin}</span>
+                          <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] font-medium border border-emerald-200 flex items-center gap-1">
+                            <ShieldCheck size={12} weight="bold" />
+                            <span>Mật khẩu: ••••</span>
+                          </span>
                         </div>
                       </div>
                     </div>

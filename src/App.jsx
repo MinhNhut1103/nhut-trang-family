@@ -43,6 +43,7 @@ import TransactionModal from './components/TransactionModal';
 import DailyReminderCard from './components/DailyReminderCard';
 import LoginForm from './components/LoginForm';
 import { Check } from '@phosphor-icons/react';
+import { sanitizeMemberForStorage } from './utils/crypto';
 
 export default function App() {
   // 1. Trạng thái người dùng và không gian
@@ -151,16 +152,29 @@ export default function App() {
 
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
 
-  // Quản lý thành viên gia đình
+  // Quản lý thành viên gia đình (Tự động xóa sạch mã PIN dạng plain text để bảo mật)
   const [members, setMembers] = useState(() => {
     const saved = localStorage.getItem('nt_family_members');
-    return saved ? JSON.parse(saved) : initialMembers;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map((m) => sanitizeMemberForStorage(m));
+        }
+      } catch (e) {}
+    }
+    return initialMembers.map((m) => sanitizeMemberForStorage(m));
   });
 
   // Trạng thái tài khoản đang đăng nhập (chỉ có form đăng nhập)
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('nt_auth_user') || sessionStorage.getItem('nt_auth_user');
-    return saved ? JSON.parse(saved) : null;
+    if (saved) {
+      try {
+        return sanitizeMemberForStorage(JSON.parse(saved));
+      } catch (e) {}
+    }
+    return null;
   });
 
   const [isMemberManagerOpen, setIsMemberManagerOpen] = useState(false);
@@ -256,7 +270,7 @@ export default function App() {
             id: m.id,
             username: m.username,
             name: m.name,
-            pin: m.pin_hash,
+            pin_hash: m.pin_hash,
             role: m.role || 'Thành viên',
             vault: m.vault || `personal_${m.username}`,
             color: m.color || 'emerald'
@@ -348,7 +362,8 @@ export default function App() {
   }, [macroTypes]);
 
   useEffect(() => {
-    localStorage.setItem('nt_family_members', JSON.stringify(members));
+    const secureList = (members || []).map((m) => sanitizeMemberForStorage(m));
+    localStorage.setItem('nt_family_members', JSON.stringify(secureList));
   }, [members]);
 
   // Thông báo nhẹ

@@ -197,15 +197,15 @@ export default function Header({
                   </li>
                 </ol>
                 <p className="text-[11px] text-emerald-700 italic pt-1">
-                  Mã SQL này sẽ tự động tạo bảng và nạp sẵn 319 giao dịch thu chi + cấu hình 3 tháng + thành viên + mục tiêu tiết kiệm!
+                  Mã SQL tạo cấu trúc bảng PostgreSQL bảo mật, bật chính sách RLS và đồng bộ Realtime.
                 </p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <span className="font-semibold text-slate-800">Hoặc chạy qua dòng lệnh Terminal:</span>
-                <div className="p-2 rounded-lg bg-slate-900 text-emerald-400 font-mono text-[11px] select-all">
-                  npm run seed:supabase
-                </div>
+                <span className="font-semibold text-slate-800">Bảo mật mã PIN & Dữ liệu:</span>
+                <p className="text-slate-500">
+                  Mã PIN của gia đình được mã hóa một chiều qua thuật toán <strong>SHA-256</strong>. Dữ liệu tài chính chỉ được lưu trên Supabase Cloud riêng của gia đình.
+                </p>
               </div>
             </div>
 

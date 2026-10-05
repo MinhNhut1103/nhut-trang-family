@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, User, SignIn, Eye, EyeSlash, ShieldCheck } from '@phosphor-icons/react';
+import { verifyPin, sanitizeMemberForStorage } from '../utils/crypto';
 
 export default function LoginForm({ members, onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -8,7 +9,7 @@ export default function LoginForm({ members, onLoginSuccess }) {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -35,14 +36,16 @@ export default function LoginForm({ members, onLoginSuccess }) {
       return;
     }
 
-    // Kiểm tra mật khẩu hoặc PIN chính xác tuyệt đối
-    if (member.pin && member.pin !== trimmedPass) {
+    // Kiểm tra mật khẩu hoặc PIN chính xác tuyệt đối qua thuật toán băm bảo mật
+    const isMatch = await verifyPin(trimmedPass, member.pin_hash || member.pin);
+    if (!isMatch) {
       setErrorMsg('Mật khẩu / Mã PIN không chính xác, vui lòng thử lại');
       return;
     }
 
-    // Đăng nhập thành công
-    onLoginSuccess(member, rememberMe);
+    // Đăng nhập thành công (loại bỏ mã PIN plain text để bảo mật)
+    const secureMember = sanitizeMemberForStorage(member);
+    onLoginSuccess(secureMember, rememberMe);
   };
 
   return (
