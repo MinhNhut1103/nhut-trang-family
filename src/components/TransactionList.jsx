@@ -31,7 +31,7 @@ import {
   ArrowDownRight,
   TrendUp
 } from '@phosphor-icons/react';
-import { categoriesList, macroTypesList } from '../data/initialData';
+import { categoriesList, macroTypesList, formatDateDisplay } from '../data/initialData';
 import TransactionModal from './TransactionModal';
 
 // Hàm lấy icon và màu sắc nhận diện trực quan theo phân loại
@@ -251,7 +251,7 @@ export default function TransactionList({
       if (!dayMap[norm.iso]) {
         dayMap[norm.iso] = {
           iso: norm.iso,
-          label: `Ngày ${norm.day}/${norm.month}`,
+          label: `${norm.day}/${norm.month}/${norm.year}`,
           count: 0
         };
       }
@@ -323,7 +323,7 @@ export default function TransactionList({
   const handleExportCSV = () => {
     const headers = ['Ngày', 'Giờ', 'Nội dung', 'Thu', 'Chi', 'Phân loại', 'Loại', 'Không gian', 'Người ghi', 'Ghi chú'];
     const rows = filteredList.map(t => [
-      t.ngay,
+      formatDateDisplay(t.ngay),
       t.gio || '',
       `"${(t.noi_dung || '').replace(/"/g, '""')}"`,
       t.thu || 0,
@@ -610,7 +610,7 @@ export default function TransactionList({
                         {/* Ngày & Giờ */}
                         <td className="py-2.5 px-3.5 tabular-nums text-slate-600 whitespace-nowrap">
                           <div className="font-medium text-slate-800 leading-tight">
-                            {tx.ngay}
+                            {formatDateDisplay(tx.ngay)}
                           </div>
                           <div className="text-[11px] text-slate-400 tabular-nums flex items-center gap-1 mt-0.5 font-medium">
                             <Clock size={11} className="text-slate-400 shrink-0" />
@@ -805,7 +805,7 @@ export default function TransactionList({
                         
                         {/* Thời gian */}
                         <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                          <span className="tabular-nums font-medium text-slate-600">{tx.ngay}</span>
+                          <span className="tabular-nums font-medium text-slate-600">{formatDateDisplay(tx.ngay)}</span>
                           <span className="text-slate-300">•</span>
                           <span className="tabular-nums flex items-center gap-1 text-slate-500">
                             <Clock size={12} className="text-slate-400" />

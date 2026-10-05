@@ -119,6 +119,30 @@ export function getCurrentTime() {
   return `${h}:${m}`;
 }
 
+// Định dạng ngày hiển thị theo chuẩn Việt Nam: DD/MM/YYYY (ví dụ: 01/09/2026)
+export function formatDateDisplay(dateStr) {
+  if (!dateStr) return '';
+  const clean = String(dateStr).split('T')[0].trim();
+  if (clean.includes('-')) {
+    const parts = clean.split('-');
+    if (parts.length >= 3) {
+      const [year, month, day] = parts;
+      return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    }
+  } else if (clean.includes('/')) {
+    const parts = clean.split('/');
+    if (parts.length >= 3) {
+      if (parts[0].length === 4) {
+        // YYYY/MM/DD
+        return `${String(parts[2]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}/${parts[0]}`;
+      }
+      // DD/MM/YYYY
+      return `${String(parts[0]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}/${parts[2]}`;
+    }
+  }
+  return dateStr;
+}
+
 // DỮ LIỆU CHÍNH XÁC 100% TỪ BẢNG EXCEL CỦA USER (ĐÃ KÈM THỜI GIAN)
 export const initialSeptemberConfig = {
   id: '2026-09',

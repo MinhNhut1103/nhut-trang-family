@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Check, X } from '@phosphor-icons/react';
-import { categoriesList, macroTypesList, getCurrentTime } from '../data/initialData';
+import { categoriesList, macroTypesList, getCurrentTime, formatDateDisplay } from '../data/initialData';
 
 export default function QuickEntry({ 
   onAddTransaction, 
@@ -310,7 +310,7 @@ export default function QuickEntry({
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">Thời gian:</span>
                 <span className="text-slate-600 tabular-nums font-medium">
-                  {confirmingQuickItem.ngay} • {confirmingQuickItem.gio}
+                  {formatDateDisplay(confirmingQuickItem.ngay)} • {confirmingQuickItem.gio}
                 </span>
               </div>
 
