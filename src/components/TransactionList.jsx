@@ -3,21 +3,123 @@ import {
   Trash, 
   DownloadSimple, 
   Table, 
-  ListBullets,
-  MagnifyingGlass,
-  SlidersHorizontal,
-  PencilSimple,
-  Clock,
-  Plus,
-  ArrowDown,
-  ArrowUp,
-  Calendar,
-  Funnel,
-  ArrowCounterClockwise,
-  X
+  ListBullets, 
+  MagnifyingGlass, 
+  SlidersHorizontal, 
+  PencilSimple, 
+  Clock, 
+  Plus, 
+  ArrowDown, 
+  ArrowUp, 
+  Calendar, 
+  Funnel, 
+  ArrowCounterClockwise, 
+  X,
+  ForkKnife,
+  Car,
+  Briefcase,
+  House,
+  ShoppingCart,
+  TShirt,
+  DeviceMobile,
+  GameController,
+  Sparkle,
+  HandCoins,
+  GraduationCap,
+  Gift,
+  ArrowUpRight,
+  ArrowDownRight,
+  TrendUp
 } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList } from '../data/initialData';
-import TransactionModal from './TransactionModal';
+// Hàm lấy icon và màu sắc nhận diện trực quan theo phân loại
+const getCategoryIcon = (category, isThu) => {
+  if (isThu) {
+    return {
+      icon: <TrendUp size={18} weight="bold" />,
+      bg: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    };
+  }
+
+  const cat = (category || '').toLowerCase().trim();
+  if (cat.includes('ăn uống')) {
+    return {
+      icon: <ForkKnife size={18} weight="bold" />,
+      bg: 'bg-amber-50 text-amber-600 border-amber-200'
+    };
+  }
+  if (cat.includes('di chuyển') || cat.includes('đi lại')) {
+    return {
+      icon: <Car size={18} weight="bold" />,
+      bg: 'bg-blue-50 text-blue-600 border-blue-200'
+    };
+  }
+  if (cat.includes('công việc')) {
+    return {
+      icon: <Briefcase size={18} weight="bold" />,
+      bg: 'bg-indigo-50 text-indigo-600 border-indigo-200'
+    };
+  }
+  if (cat.includes('nhà cửa')) {
+    return {
+      icon: <House size={18} weight="bold" />,
+      bg: 'bg-teal-50 text-teal-600 border-teal-200'
+    };
+  }
+  if (cat.includes('tiêu hao')) {
+    return {
+      icon: <ShoppingCart size={18} weight="bold" />,
+      bg: 'bg-purple-50 text-purple-600 border-purple-200'
+    };
+  }
+  if (cat.includes('quần áo')) {
+    return {
+      icon: <TShirt size={18} weight="bold" />,
+      bg: 'bg-pink-50 text-pink-600 border-pink-200'
+    };
+  }
+  if (cat.includes('điện tử')) {
+    return {
+      icon: <DeviceMobile size={18} weight="bold" />,
+      bg: 'bg-cyan-50 text-cyan-600 border-cyan-200'
+    };
+  }
+  if (cat.includes('giải trí')) {
+    return {
+      icon: <GameController size={18} weight="bold" />,
+      bg: 'bg-rose-50 text-rose-600 border-rose-200'
+    };
+  }
+  if (cat.includes('làm đẹp')) {
+    return {
+      icon: <Sparkle size={18} weight="bold" />,
+      bg: 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-200'
+    };
+  }
+  if (cat.includes('mượn tiền')) {
+    return {
+      icon: <HandCoins size={18} weight="bold" />,
+      bg: 'bg-yellow-50 text-yellow-700 border-yellow-200'
+    };
+  }
+  if (cat.includes('học phí')) {
+    return {
+      icon: <GraduationCap size={18} weight="bold" />,
+      bg: 'bg-sky-50 text-sky-600 border-sky-200'
+    };
+  }
+  if (cat.includes('biếu tặng')) {
+    return {
+      icon: <Gift size={18} weight="bold" />,
+      bg: 'bg-orange-50 text-orange-600 border-orange-200'
+    };
+  }
+
+  return {
+    icon: <ArrowDownRight size={18} weight="bold" />,
+    bg: 'bg-rose-50 text-rose-600 border-rose-200'
+  };
+};
 
 export default function TransactionList({ 
   transactions = [], 
@@ -636,82 +738,102 @@ export default function TransactionList({
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="p-3 sm:p-4 space-y-2.5 bg-slate-50/50">
                 {filteredList.map((tx) => {
                   const isThu = (tx.thu || 0) > 0;
+                  const catMeta = getCategoryIcon(tx.phan_loai, isThu);
                   return (
                     <div 
                       key={tx.id} 
-                      className="p-3 sm:p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/60 active:bg-slate-50 transition-colors"
+                      className="p-3.5 bg-white hover:bg-slate-50/80 border border-slate-200/90 rounded-2xl shadow-2xs space-y-2.5 transition-all"
                     >
-                      {/* Icon & Nội dung */}
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                          isThu ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'
-                        }`}>
-                          {isThu ? <ArrowDown size={14} weight="bold" /> : <ArrowUp size={14} weight="bold" />}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold text-slate-900 truncate">
-                            {tx.noi_dung}
+                      {/* HÀNG TRÊN: ICON PHÂN LOẠI + TÊN + BADGE VÀ NÚT SỬA/XÓA */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        
+                        {/* Trái: Icon Phân Loại + Tên giao dịch + Phân loại */}
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${catMeta.bg} shadow-2xs`}>
+                            {catMeta.icon}
                           </div>
-                          
-                          {/* Dòng thông tin phụ: Ngày, Giờ, Phân loại, Người ghi */}
-                          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-500 mt-1 flex-wrap">
-                            <span className="tabular-nums font-medium text-slate-600">{tx.ngay}</span>
-                            <span className="text-slate-300">•</span>
-                            <span className="tabular-nums text-slate-500 flex items-center gap-0.5">
-                              <Clock size={10} className="text-slate-400" />
-                              <span>{tx.gio || '08:00'}</span>
-                            </span>
-                            <span className="text-slate-300">•</span>
-                            <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
-                              {tx.phan_loai}
-                            </span>
-                            {tx.author && (
-                              <>
-                                <span className="text-slate-300">•</span>
-                                <span className="text-slate-400 font-medium">
-                                  {tx.author}
+
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-bold text-slate-800 truncate leading-snug">
+                              {tx.noi_dung}
+                            </h4>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-semibold text-[11px] border border-slate-200/60">
+                                {tx.phan_loai}
+                              </span>
+                              {tx.loai && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 font-medium text-[10px] border border-slate-200/50">
+                                  {tx.loai}
                                 </span>
-                              </>
-                            )}
+                              )}
+                              {tx.author && (
+                                <span className="text-[11px] text-slate-400 font-medium">
+                                  • {tx.author}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Số tiền & Nút Sửa / Xóa */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="text-right">
-                          {isThu ? (
-                            <div className="text-xs sm:text-sm font-bold text-emerald-700 tabular-nums">
-                              {privacyMode ? '•••••• đ' : `+${new Intl.NumberFormat('vi-VN').format(tx.thu)}đ`}
-                            </div>
-                          ) : (
-                            <div className="text-xs sm:text-sm font-bold text-rose-600 tabular-nums">
-                              {privacyMode ? '•••••• đ' : `-${new Intl.NumberFormat('vi-VN').format(tx.chi)}đ`}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-0.5 pl-1.5 border-l border-slate-100">
+                        {/* Phải: Cụm nút Thao tác Sửa / Xóa */}
+                        <div className="flex items-center gap-1 shrink-0 pt-0.5">
                           <button
                             onClick={() => handleOpenEdit(tx)}
-                            className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 rounded-lg transition-colors"
-                            title="Sửa"
+                            className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-400 flex items-center justify-center border border-slate-200/70 transition-colors tactile-btn"
+                            title="Chỉnh sửa giao dịch"
                           >
                             <PencilSimple size={15} />
                           </button>
                           <button
                             onClick={() => handleDeleteWithConfirm(tx)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 rounded-lg transition-colors"
-                            title="Xóa"
+                            className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 flex items-center justify-center border border-slate-200/70 transition-colors tactile-btn"
+                            title="Xóa giao dịch"
                           >
                             <Trash size={15} />
                           </button>
                         </div>
+
                       </div>
+
+                      {/* HÀNG DƯỚI: THỜI GIAN BÊN TRÁI & GIÁ TIỀN NẰM DƯỚI TO RÕ RÀNG */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                        
+                        {/* Thời gian */}
+                        <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                          <span className="tabular-nums font-medium text-slate-600">{tx.ngay}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="tabular-nums flex items-center gap-1 text-slate-500">
+                            <Clock size={12} className="text-slate-400" />
+                            <span>{tx.gio || '08:00'}</span>
+                          </span>
+                          {tx.vault && tx.vault !== 'shared' && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-emerald-700 font-medium">
+                                {tx.vault === 'personal_nhut' ? 'Ví Nhựt' : 'Ví Trang'}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* GIÁ TIỀN NẰM DƯỚI TO RÕ RÀNG */}
+                        <div className="text-right">
+                          {isThu ? (
+                            <span className="text-base font-extrabold text-emerald-700 tabular-nums font-money">
+                              {privacyMode ? '•••••• đ' : `+${new Intl.NumberFormat('vi-VN').format(tx.thu)} đ`}
+                            </span>
+                          ) : (
+                            <span className="text-base font-extrabold text-rose-600 tabular-nums font-money">
+                              {privacyMode ? '•••••• đ' : `-${new Intl.NumberFormat('vi-VN').format(tx.chi)} đ`}
+                            </span>
+                          )}
+                        </div>
+
+                      </div>
+
                     </div>
                   );
                 })}
