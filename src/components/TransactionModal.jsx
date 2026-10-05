@@ -128,23 +128,35 @@ export default function TransactionModal({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-lg bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4 max-h-[92vh] overflow-y-auto"
+        className={`w-full max-w-lg p-5 md:p-6 rounded-2xl border shadow-xl space-y-4 max-h-[92vh] overflow-y-auto transition-colors duration-300 ${
+          formData.actionType === 'chi'
+            ? 'bg-gradient-to-b from-rose-50/80 via-white to-white border-rose-200/90 shadow-rose-950/5'
+            : 'bg-gradient-to-b from-emerald-50/80 via-white to-white border-emerald-200/90 shadow-emerald-950/5'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-              isEditing ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-700'
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+              formData.actionType === 'chi'
+                ? 'bg-rose-100 text-rose-700'
+                : 'bg-emerald-100 text-emerald-700'
             }`}>
-              {isEditing ? <PencilSimple size={18} weight="bold" /> : <Plus size={18} weight="bold" />}
+              {isEditing ? (
+                <PencilSimple size={18} weight="bold" />
+              ) : formData.actionType === 'chi' ? (
+                <ArrowDown size={18} weight="bold" />
+              ) : (
+                <Plus size={18} weight="bold" />
+              )}
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-base">
-                {isEditing ? 'Sửa Khoản Thu Chi' : 'Thêm Khoản Thu Chi Mới'}
+                {isEditing ? 'Sửa Khoản Thu Chi' : formData.actionType === 'chi' ? 'Thêm Khoản Chi Mới' : 'Thêm Khoản Thu Mới'}
               </h3>
               <p className="text-xs text-slate-500">
-                {isEditing ? 'Cập nhật lại thông tin đã ghi trong sổ' : 'Ghi chép giao dịch mới vào sổ gia đình'}
+                {isEditing ? 'Cập nhật lại thông tin đã ghi trong sổ' : formData.actionType === 'chi' ? 'Ghi chép khoản đã chi tiêu vào sổ' : 'Ghi chép nguồn thu nhập mới vào sổ'}
               </p>
             </div>
           </div>
@@ -344,10 +356,14 @@ export default function TransactionModal({
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors"
+              className={`flex-1 py-2.5 rounded-xl text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-all tactile-btn cursor-pointer ${
+                formData.actionType === 'chi'
+                  ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 shadow-rose-600/20'
+                  : 'bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 shadow-emerald-700/20'
+              }`}
             >
               <Check size={16} weight="bold" />
-              <span>{isEditing ? 'Lưu thay đổi' : 'Thêm vào sổ'}</span>
+              <span>{isEditing ? 'Lưu thay đổi' : formData.actionType === 'chi' ? 'Thêm khoản chi' : 'Thêm khoản thu'}</span>
             </button>
           </div>
 
