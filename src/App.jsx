@@ -79,10 +79,10 @@ const getDeterministicTime = (tx, index = 0) => {
 };
 
 export default function App() {
-  // Trạng thái tài khoản đang đăng nhập (chỉ lưu trong sessionStorage để duy trì phiên của tab đang mở)
+  // Trạng thái tài khoản đang đăng nhập (lưu cả localStorage & sessionStorage để duy trì vĩnh viễn khi F5 / mở lại trình duyệt)
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const saved = sessionStorage.getItem('nt_auth_user');
+      const saved = localStorage.getItem('nt_auth_user') || sessionStorage.getItem('nt_auth_user');
       if (saved) {
         return sanitizeMemberForStorage(JSON.parse(saved));
       }
@@ -93,17 +93,22 @@ export default function App() {
   // 1. Trạng thái người dùng và không gian
   const [activeUser, setActiveUser] = useState(() => {
     try {
-      const savedAuth = sessionStorage.getItem('nt_auth_user');
+      const savedAuth = localStorage.getItem('nt_auth_user') || sessionStorage.getItem('nt_auth_user');
       if (savedAuth) {
         const u = JSON.parse(savedAuth);
         if (u && u.username) return u.username;
       }
+      const savedActive = localStorage.getItem('nt_active_user');
+      if (savedActive) return savedActive;
     } catch (e) {}
     return initialProfile.activeUser || 'nhut';
   });
 
   const handleSelectActiveUser = (username) => {
     setActiveUser(username);
+    try {
+      localStorage.setItem('nt_active_user', username);
+    } catch (e) {}
   };
 
   const [activeVault, setActiveVault] = useState(() => {
@@ -205,9 +210,9 @@ export default function App() {
     }, 2800);
   };
 
-  // 1. Tự động xóa sạch mọi key cũ trong localStorage để đảm bảo 100% dữ liệu nằm trên Supabase
+  // 1. Tự động xóa sạch các cache dữ liệu cũ (giao dịch, cấu hình) để đảm bảo 100% dữ liệu đồng bộ từ Supabase
   useEffect(() => {
-    ['nt_transactions', 'nt_monthly_configs', 'nt_current_funds', 'nt_current_month', 'nt_active_user', 'nt_auth_user'].forEach((k) => {
+    ['nt_transactions', 'nt_monthly_configs', 'nt_current_funds', 'nt_current_month'].forEach((k) => {
       try {
         localStorage.removeItem(k);
       } catch (e) {}
@@ -537,12 +542,17 @@ export default function App() {
     }
   };
 
-  // Đăng nhập & Đăng xuất (lưu phiên đăng nhập an toàn trong sessionStorage)
-  const handleLoginSuccess = (member) => {
+  // Đăng nhập & Đăng xuất (lưu phiên đăng nhập an toàn trong localStorage & sessionStorage để ghi nhớ sau khi F5)
+  const handleLoginSuccess = (member, rememberMe = true) => {
     setCurrentUser(member);
     setActiveUser(member.username);
     try {
-      sessionStorage.setItem('nt_auth_user', JSON.stringify(member));
+      const serialized = JSON.stringify(member);
+      sessionStorage.setItem('nt_auth_user', serialized);
+      if (rememberMe) {
+        localStorage.setItem('nt_auth_user', serialized);
+        localStorage.setItem('nt_active_user', member.username);
+      }
     } catch (e) {}
     showToast(`Chào mừng ${member.name} đã đăng nhập!`);
   };
@@ -579,7 +589,11 @@ export default function App() {
       const updatedUser = { ...currentUser, ...updates };
       setCurrentUser(updatedUser);
       try {
-        sessionStorage.setItem('nt_auth_user', JSON.stringify(updatedUser));
+        const serialized = JSON.stringify(updatedUser);
+        sessionStorage.setItem('nt_auth_user', serialized);
+        if (localStorage.getItem('nt_auth_user')) {
+          localStorage.setItem('nt_auth_user', serialized);
+        }
       } catch (e) {}
     }
     showToast('Đã cập nhật thông tin thành viên');
@@ -968,6 +982,8 @@ export default function App() {
         currentMonth={currentMonth}
         categories={categories}
         macroTypes={macroTypes}
+        goals={initialGoals}
+        monthlyConfigs={monthlyConfigs}
       />
 
       {/* Chân trang */}

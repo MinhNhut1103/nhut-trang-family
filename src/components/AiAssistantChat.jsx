@@ -7,14 +7,17 @@ import {
   Trash, 
   Robot, 
   Check, 
-  ArrowClockwise,
-  ChartLineUp,
-  Coins,
-  ShieldCheck,
-  MagicWand,
-  Heart
+  ArrowClockwise, 
+  ChartLineUp, 
+  Coins, 
+  ShieldCheck, 
+  MagicWand, 
+  Heart,
+  Copy,
+  ArrowRight
 } from '@phosphor-icons/react';
 import { sendChatMessageToAi, getAiConfig, saveAiConfig, AVAILABLE_MODELS } from '../services/kiraAiService';
+import { normalizeDateISO, formatDateDisplay } from '../data/initialData';
 
 /**
  * Component hiển thị nội dung tin nhắn tinh tế, gọn gàng
@@ -143,6 +146,8 @@ export default function AiAssistantChat({
   onUpdateTransaction,
   transactions = [],
   monthlyConfig = {},
+  monthlyConfigs = {},
+  goals = [],
   members = [],
   activeUser = 'nhut',
   currentFunds = {},
@@ -165,6 +170,24 @@ export default function AiAssistantChat({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(() => getAiConfig().model || 'kira-mini-1.0');
+  const [copiedMsgId, setCopiedMsgId] = useState(null);
+
+  const handleCopyMessage = async (msgId, content) => {
+    try {
+      const clean = (content || '')
+        .replace(/```(?:json)?[\s\S]*?```/gi, '')
+        .replace(/\{[\s\S]*?"(?:type|action)"[\s\S]*?\}/gi, '')
+        .trim();
+      await navigator.clipboard.writeText(clean || content);
+      setCopiedMsgId(msgId);
+      setTimeout(() => {
+        setCopiedMsgId(null);
+      }, 2000);
+    } catch (err) {
+      console.warn('Lỗi khi sao chép:', err);
+    }
+  };
+
   // Trạng thái Popup modal xác nhận xóa giao dịch Quản gia nhập
   const [deleteConfirmModal, setDeleteConfirmModal] = useState({
     isOpen: false,
@@ -187,6 +210,19 @@ export default function AiAssistantChat({
     saveAiConfig({ ...cfg, model: newModelId });
   };
 
+  // Xử lý khi chủ nhà muốn AI tiếp tục viết tiếp phần còn lại
+  const handleContinue = (targetMsg = null) => {
+    if (isLoading) return;
+    if (targetMsg?.id) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === targetMsg.id ? { ...m, isTruncated: false, canContinue: false } : m
+        )
+      );
+    }
+    handleSend('Tiếp tục viết tiếp phần còn lại nhé!');
+  };
+
   // Tự động cuộn xuống tin nhắn cuối
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -201,10 +237,42 @@ export default function AiAssistantChat({
 
   // Tính toán nhanh số liệu tài chính tháng này để đưa vào context
   const getContextSummary = () => {
-    const monthTx = transactions.filter(t => !currentMonth || (t.ngay && t.ngay.startsWith(currentMonth)));
+    const monthTx = transactions.filter((t) => {
+      if (!currentMonth) return true;
+      const iso = normalizeDateISO(t.ngay);
+      return iso && iso.startsWith(currentMonth);
+    });
     const totalIncome = monthTx.reduce((sum, t) => sum + (Number(t.thu) || 0), 0);
     const totalExpense = monthTx.reduce((sum, t) => sum + (Number(t.chi) || 0), 0);
     const netBalance = totalIncome - totalExpense;
+
+    // Thống kê phân loại chi tiêu
+    const categoryBreakdown = {};
+    monthTx.forEach((t) => {
+      const cat = t.phan_loai || 'khác';
+      if (!categoryBreakdown[cat]) {
+        categoryBreakdown[cat] = { chi: 0, thu: 0, count: 0 };
+      }
+      categoryBreakdown[cat].chi += Number(t.chi) || 0;
+      categoryBreakdown[cat].thu += Number(t.thu) || 0;
+      categoryBreakdown[cat].count += 1;
+    });
+
+    // Thống kê theo từng người
+    const memberBreakdown = {};
+    members.forEach((m) => {
+      memberBreakdown[m.username] = { name: m.name, chi: 0, thu: 0, count: 0 };
+    });
+    memberBreakdown['shared'] = { name: 'Quỹ chung', chi: 0, thu: 0, count: 0 };
+
+    monthTx.forEach((t) => {
+      const auth = (t.author || '').toLowerCase() === 'trang' ? 'trang' : 'nhut';
+      if (memberBreakdown[auth]) {
+        memberBreakdown[auth].chi += Number(t.chi) || 0;
+        memberBreakdown[auth].thu += Number(t.thu) || 0;
+        memberBreakdown[auth].count += 1;
+      }
+    });
 
     return {
       totalIncome,
@@ -212,6 +280,8 @@ export default function AiAssistantChat({
       netBalance,
       currentFunds: currentFunds?.so_tien_hien_co || 0,
       txCount: monthTx.length,
+      categoryBreakdown,
+      memberBreakdown,
     };
   };
 
@@ -309,9 +379,12 @@ export default function AiAssistantChat({
       categories,
       macroTypes,
       summary: getContextSummary(),
-      recentTransactions: transactions.slice(0, 3), // Rút gọn token context
-      aiTransactions: aiTransactions.slice(0, 5),   // Rút gọn token context
+      transactions: transactions, // Toàn bộ dữ liệu giao dịch trong sổ của gia đình
+      aiTransactions: aiTransactions,
       monthlyConfig,
+      monthlyConfigs,
+      goals,
+      currentFunds,
     };
 
     // Rút gọn lịch sử: chỉ gửi 4 tin nhắn gần nhất thay vì toàn bộ cuộc hội thoại dài
@@ -491,6 +564,8 @@ export default function AiAssistantChat({
           pendingDelete: pendingDelete,
           updatedTx: updatedTx,
           modelUsed: res.modelUsed,
+          isTruncated: res.isTruncated,
+          canContinue: res.canContinue,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         }
       ]);
@@ -631,10 +706,10 @@ export default function AiAssistantChat({
 
       {/* CỬA SỔ CHAT TRỢ LÝ AI MINI (Được mở rộng to hơn trên máy tính) */}
       {isOpen && (
-        <div className="fixed bottom-3 right-3 left-3 sm:left-auto sm:bottom-6 sm:right-6 z-50 w-auto sm:w-[480px] sm:max-w-[500px] h-[80vh] max-h-[80vh] sm:h-[650px] sm:max-h-[88vh] bg-white/95 backdrop-blur-md rounded-3xl border border-pink-200/90 shadow-2xl shadow-pink-500/20 flex flex-col overflow-hidden animate-scale-up select-none">
+        <div className="fixed bottom-3 right-3 left-3 sm:left-auto sm:bottom-6 sm:right-6 z-50 w-auto sm:w-[480px] sm:max-w-[500px] h-[80vh] max-h-[80vh] sm:h-[650px] sm:max-h-[88vh] bg-white/95 backdrop-blur-md rounded-3xl border border-pink-200/90 shadow-2xl shadow-pink-500/20 flex flex-col overflow-hidden animate-scale-up">
           
           {/* Header Cửa sổ Chat */}
-          <div className="px-4 py-3 border-b border-pink-100 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 text-white flex items-center justify-between shrink-0">
+          <div className="px-4 py-3 border-b border-pink-100 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 text-white flex items-center justify-between shrink-0 select-none">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center border border-white/30 text-white">
                 <Robot size={18} weight="fill" />
@@ -728,6 +803,14 @@ export default function AiAssistantChat({
             >
               💡 Lời khuyên cuối tháng
             </button>
+            <button
+              onClick={() => handleContinue()}
+              disabled={isLoading}
+              className="px-2.5 py-1 rounded-full bg-rose-50 border border-rose-300 text-rose-700 hover:bg-rose-100 font-bold whitespace-nowrap tactile-btn shrink-0 flex items-center gap-1 shadow-xs"
+              title="Yêu cầu Quản gia viết tiếp phần còn lại"
+            >
+              ⏩ Tiếp tục viết tiếp
+            </button>
           </div>
 
           {/* Vùng Tin nhắn */}
@@ -740,7 +823,7 @@ export default function AiAssistantChat({
                   className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-fade-in`}
                 >
                   <div
-                    className={`max-w-[88%] p-3.5 rounded-2xl leading-relaxed ${
+                    className={`max-w-[88%] p-3.5 rounded-2xl leading-relaxed select-text ${
                       isUser
                         ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-br-xs shadow-xs'
                         : m.isError
@@ -878,11 +961,50 @@ export default function AiAssistantChat({
                         ))}
                       </div>
                     )}
+
+                    {/* Nút bấm Tiếp tục nếu câu trả lời còn tiếp hoặc bị ngắt */}
+                    {m.role === 'assistant' && (m.isTruncated || m.canContinue) && (
+                      <div className="mt-3 pt-2.5 border-t border-pink-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gradient-to-r from-pink-50/80 to-rose-50/80 p-2.5 rounded-xl border border-pink-200/90 animate-fade-in">
+                        <div className="flex items-center gap-1.5 text-pink-800 text-[11px] font-medium">
+                          <Sparkle size={13} weight="fill" className="text-amber-500 animate-pulse shrink-0" />
+                          <span>Nội dung còn tiếp... Bạn có muốn Quản gia viết tiếp không?</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleContinue(m)}
+                          disabled={isLoading}
+                          className="py-1 px-3 rounded-lg bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:scale-95 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0 tactile-btn"
+                          title="Bấm để Quản gia viết tiếp phần còn lại"
+                        >
+                          <span>Tiếp tục</span>
+                          <ArrowRight size={12} weight="bold" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  <span className="text-[9px] text-slate-400 mt-1 px-1">
-                    {m.timestamp}
-                  </span>
+                  <div className={`flex items-center gap-1.5 mt-1 px-1 text-[10px] text-slate-400 select-none ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span>{m.timestamp}</span>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyMessage(m.id, m.content)}
+                      className="p-0.5 px-1.5 rounded-md hover:bg-pink-100/80 hover:text-pink-700 active:scale-95 transition-all flex items-center gap-1 text-[10px] text-slate-400 hover:text-pink-600 font-medium cursor-pointer"
+                      title="Sao chép tin nhắn"
+                    >
+                      {copiedMsgId === m.id ? (
+                        <>
+                          <Check size={12} weight="bold" className="text-emerald-600" />
+                          <span className="text-emerald-600 font-semibold">Đã chép</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          <span>Sao chép</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               );
             })}
