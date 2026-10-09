@@ -46,6 +46,8 @@ import CategoryManagerModal from './components/CategoryManagerModal';
 import MemberManagerModal from './components/MemberManagerModal';
 import MonthManagerModal from './components/MonthManagerModal';
 import TransactionModal from './components/TransactionModal';
+import AiSettingsModal from './components/AiSettingsModal';
+import AiAssistantChat from './components/AiAssistantChat';
 import DailyReminderCard from './components/DailyReminderCard';
 import LoginForm from './components/LoginForm';
 import { Check } from '@phosphor-icons/react';
@@ -166,6 +168,8 @@ export default function App() {
   });
 
   const [isMemberManagerOpen, setIsMemberManagerOpen] = useState(false);
+  const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
+  const [isAiChatOpen, setIsAiChatOpen] = useState(false);
 
   // Modal Thêm / Sửa thu chi toàn cục (dùng cho cả DailyReminderCard và TransactionList)
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
@@ -860,6 +864,15 @@ export default function App() {
         currentMonth={currentMonth}
       />
 
+      {/* Modal Cài đặt Quản gia AI */}
+      <AiSettingsModal
+        isOpen={isAiSettingsOpen}
+        onClose={() => setIsAiSettingsOpen(false)}
+        onSaveSuccess={(cfg) => {
+          showToast(`Đã lưu cấu hình (${cfg.model})`);
+        }}
+      />
+
       {/* Đầu trang (Thanh điều hướng dính) */}
       <Header
         activeUser={activeUser}
@@ -872,6 +885,7 @@ export default function App() {
         onLogout={handleLogout}
         onOpenMemberManager={() => setIsMemberManagerOpen(true)}
         onSyncSupabase={handleSyncAllToSupabase}
+        onOpenAiSettings={() => setIsAiSettingsOpen(true)}
       />
 
       {/* Nội dung chính: Khoảng trắng giữa tất cả các phần đều tăm tắp (space-y-3) */}
@@ -937,6 +951,24 @@ export default function App() {
           onOpenEdit={handleOpenEditTx}
         />
       </main>
+
+      {/* Quản gia nhà Nhựt Trang (Bot Chat Thông Minh) */}
+      <AiAssistantChat
+        isOpen={isAiChatOpen}
+        onToggle={() => setIsAiChatOpen(!isAiChatOpen)}
+        onOpenSettings={() => setIsAiSettingsOpen(true)}
+        onAddTransaction={handleAddTransaction}
+        onDeleteTransaction={handleDeleteTransaction}
+        onUpdateTransaction={handleUpdateTransaction}
+        transactions={transactions}
+        monthlyConfig={activeMonthlyConfig}
+        members={members}
+        activeUser={activeUser}
+        currentFunds={currentFunds}
+        currentMonth={currentMonth}
+        categories={categories}
+        macroTypes={macroTypes}
+      />
 
       {/* Chân trang */}
       <footer className="w-full border-t border-pink-200/80 bg-white/40 py-4 px-4 text-center text-xs text-pink-900/60">

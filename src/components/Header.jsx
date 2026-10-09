@@ -6,7 +6,8 @@ import {
   X, 
   Check, 
   Users, 
-  SignOut 
+  SignOut,
+  Sparkle
 } from '@phosphor-icons/react';
 import { isSupabaseConfigured } from '../supabaseClient';
 
@@ -20,7 +21,8 @@ export default function Header({
   currentMonth,
   onLogout,
   onOpenMemberManager,
-  onSyncSupabase
+  onSyncSupabase,
+  onOpenAiSettings
 }) {
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -129,6 +131,16 @@ export default function Header({
             title="Quản lý thành viên gia đình"
           >
             <Users size={16} weight="bold" />
+          </button>
+
+          {/* Nút Cài đặt Quản gia AI */}
+          <button
+            onClick={onOpenAiSettings}
+            className="px-2 md:px-2.5 py-1.5 md:py-2 rounded-xl border border-pink-200 bg-gradient-to-r from-pink-50 to-rose-50 text-pink-700 hover:from-pink-100 hover:to-rose-100 tactile-btn transition-all flex items-center gap-1.5"
+            title="Cài đặt Quản gia AI & Chọn Model"
+          >
+            <Sparkle size={15} weight="fill" className="text-pink-600" />
+            <span className="text-xs font-bold hidden sm:inline">Quản gia</span>
           </button>
 
           {/* Nút ẩn số tiền */}

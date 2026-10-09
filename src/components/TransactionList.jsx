@@ -26,7 +26,8 @@ import {
   GraduationCap,
   Gift,
   ArrowDownRight,
-  TrendUp
+  TrendUp,
+  Robot
 } from '@phosphor-icons/react';
 import { categoriesList, macroTypesList, formatDateDisplay, sortTransactionsByDateDesc } from '../data/initialData';
 import TransactionModal from './TransactionModal';
@@ -141,6 +142,7 @@ export default function TransactionList({
   const [filterDate, setFilterDate] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [filterCreator, setFilterCreator] = useState('all'); // 'all' | 'ai' | 'manual'
   const [searchKeyword, setSearchKeyword] = useState('');
   
   // Trên điện thoại, ưu tiên dạng thẻ (cards) cực kỳ tiện thao tác cảm ứng
@@ -269,7 +271,26 @@ export default function TransactionList({
     return Object.values(dayMap).sort((a, b) => b.iso.localeCompare(a.iso));
   }, [transactions, filterMonth, currentMonth]);
 
-  // Lọc dữ liệu theo ngày, tháng, phân loại, loại, từ khóa và LUÔN SẮP XẾP TỪ MỚI TỚI CŨ
+  // Kiểm tra giao dịch có tag Quản gia nhập (do Quản gia thêm)
+  const isAiTransaction = (tx) => {
+    return Boolean(
+      tx.is_ai || 
+      tx.created_by === 'ai' || 
+      tx.tag === 'Quản gia nhập' ||
+      (tx.ghi_chu && (
+        tx.ghi_chu.includes('Quản gia nhập') || 
+        tx.ghi_chu.includes('Quản gia') || 
+        tx.ghi_chu.includes('AI nhập')
+      ))
+    );
+  };
+
+  // Đếm số lượng giao dịch do Quản gia thêm
+  const aiTxCount = React.useMemo(() => {
+    return transactions.filter(isAiTransaction).length;
+  }, [transactions]);
+
+  // Lọc dữ liệu theo ngày, tháng, phân loại, loại, nguồn tạo, từ khóa và LUÔN SẮP XẾP TỪ MỚI TỚI CŨ
   const filteredList = React.useMemo(() => {
     const list = transactions.filter((tx) => {
       // 1. Lọc theo ngày cụ thể (nếu người dùng chọn ngày)
@@ -291,7 +312,14 @@ export default function TransactionList({
       // 3. Lọc theo loại
       if (filterType !== 'all' && tx.loai !== filterType) return false;
 
-      // 4. Tìm kiếm nội dung, người ghi, ghi chú, số tiền
+      // 4. Lọc theo nguồn tạo (Quản gia AI hay tự nhập)
+      if (filterCreator === 'ai') {
+        if (!isAiTransaction(tx)) return false;
+      } else if (filterCreator === 'manual') {
+        if (isAiTransaction(tx)) return false;
+      }
+
+      // 5. Tìm kiếm nội dung, người ghi, ghi chú, số tiền
       if (searchKeyword.trim()) {
         const q = searchKeyword.toLowerCase();
         const matchTitle = (tx.noi_dung || '').toLowerCase().includes(q);
@@ -310,7 +338,7 @@ export default function TransactionList({
 
     // Sắp xếp nghiêm ngặt từ MỚI TỚI CŨ (Ngày giảm dần -> Giờ giảm dần -> ID giảm dần)
     return sortTransactionsByDateDesc(list);
-  }, [transactions, filterDate, filterMonth, currentMonth, filterCategory, filterType, searchKeyword]);
+  }, [transactions, filterDate, filterMonth, currentMonth, filterCategory, filterType, filterCreator, searchKeyword]);
 
   const totalThu = filteredList.reduce((s, t) => s + (Number(t.thu) || 0), 0);
   const totalChi = filteredList.reduce((s, t) => s + (Number(t.chi) || 0), 0);
@@ -321,6 +349,7 @@ export default function TransactionList({
     filterCategory !== 'all' || 
     filterType !== 'all' || 
     filterMonth !== 'current' || 
+    filterCreator !== 'all' ||
     searchKeyword.trim()
   );
 
@@ -329,6 +358,7 @@ export default function TransactionList({
     setFilterDate('');
     setFilterCategory('all');
     setFilterType('all');
+    setFilterCreator('all');
     setSearchKeyword('');
   };
 
@@ -416,6 +446,64 @@ export default function TransactionList({
                 title="Xóa tìm kiếm"
               >
                 <X size={15} weight="bold" />
+              </button>
+            )}
+          </div>
+
+          {/* HÀNG 2.5: BỘ LỌC NHANH NGUỒN TẠO (TẤT CẢ / QUẢN GIA THÊM / TỰ NHẬP TAY) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
+            <button
+              type="button"
+              onClick={() => setFilterCreator('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all tactile-btn shrink-0 ${
+                filterCreator === 'all'
+                  ? 'bg-slate-800 text-white shadow-xs'
+                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+              }`}
+            >
+              <span>Tất cả</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterCreator(filterCreator === 'ai' ? 'all' : 'ai')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all tactile-btn shrink-0 ${
+                filterCreator === 'ai'
+                  ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-xs ring-2 ring-pink-300'
+                  : 'bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200'
+              }`}
+              title="Lọc các khoản thu chi do Quản gia nhập"
+            >
+              <Robot size={14} weight="bold" />
+              <span>Quản gia nhập</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                filterCreator === 'ai' ? 'bg-white/25 text-white' : 'bg-pink-200/80 text-pink-800'
+              }`}>
+                {aiTxCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterCreator(filterCreator === 'manual' ? 'all' : 'manual')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all tactile-btn shrink-0 ${
+                filterCreator === 'manual'
+                  ? 'bg-emerald-700 text-white shadow-xs ring-2 ring-emerald-300'
+                  : 'bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200'
+              }`}
+            >
+              <span>✍️ Tự nhập tay</span>
+            </button>
+
+            {isFiltering && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 transition-colors tactile-btn shrink-0 flex items-center gap-1 ml-auto"
+                title="Xóa tất cả bộ lọc về mặc định"
+              >
+                <X size={13} weight="bold" />
+                <span>Bỏ lọc</span>
               </button>
             )}
           </div>
@@ -528,6 +616,23 @@ export default function TransactionList({
               </select>
             </div>
 
+            {/* Hàng 3: Lọc chi tiết theo Nguồn tạo (Quản gia hay Tự nhập) */}
+            <div className={`sm:col-span-2 flex items-center justify-between bg-white border ${filterCreator !== 'all' ? 'border-pink-500 bg-pink-50/30' : 'border-slate-200'} rounded-xl px-2.5 sm:px-3 py-2 shadow-2xs hover:border-pink-500/40 transition-colors`}>
+              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold shrink-0">
+                <Robot size={15} className="text-pink-600 shrink-0" weight="bold" />
+                <span className="inline">Nguồn ghi:</span>
+              </div>
+              <select
+                value={filterCreator}
+                onChange={(e) => setFilterCreator(e.target.value)}
+                className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-1.5 truncate"
+              >
+                <option value="all">Tất cả nguồn ({transactions.length} khoản)</option>
+                <option value="ai">🤖 Quản gia nhập ({aiTxCount} khoản)</option>
+                <option value="manual">✍️ Tự nhập tay ({transactions.length - aiTxCount} khoản)</option>
+              </select>
+            </div>
+
           </div>
 
           {/* HÀNG CÔNG CỤ PHỤ (DANH MỤC, XEM BẢNG/THẺ, XUẤT FILE) - CHIA 3 CỘT ĐỀU ĐẸP MẮT */}
@@ -629,14 +734,25 @@ export default function TransactionList({
 
                         {/* Nội dung */}
                         <td className="py-2.5 px-3.5 font-medium text-slate-800">
-                          <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span>{tx.noi_dung}</span>
+                            {isAiTransaction(tx) && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                                🤖 Quản gia nhập
+                              </span>
+                            )}
                           </div>
-                          {tx.ghi_chu && (
-                            <div className="text-[11px] text-slate-400 font-normal mt-0.5">
-                              {tx.ghi_chu.replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim()}
-                            </div>
-                          )}
+                          {(() => {
+                            const subNote = (tx.ghi_chu || '')
+                              .replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '')
+                              .replace(/Quản gia nhập|AI nhập tự động|🤖 Quản gia nhập tự động/gi, '')
+                              .trim();
+                            return subNote ? (
+                              <div className="text-[11px] text-slate-400 font-normal mt-0.5">
+                                {subNote}
+                              </div>
+                            ) : null;
+                          })()}
                         </td>
 
                         {/* Thu */}
@@ -767,16 +883,27 @@ export default function TransactionList({
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-1">
-                          <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <h4 className="text-sm font-bold text-slate-800 leading-snug break-words">
                               {tx.noi_dung}
                             </h4>
+                            {isAiTransaction(tx) && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                                🤖 Quản gia nhập
+                              </span>
+                            )}
                           </div>
-                          {tx.ghi_chu && (
-                            <p className="text-xs text-slate-500 font-normal break-words">
-                              {tx.ghi_chu.replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '').trim()}
-                            </p>
-                          )}
+                          {(() => {
+                            const subNote = (tx.ghi_chu || '')
+                              .replace(/\[Tiền mặt\]|\[Thẻ NH\]/g, '')
+                              .replace(/Quản gia nhập|AI nhập tự động|🤖 Quản gia nhập tự động/gi, '')
+                              .trim();
+                            return subNote ? (
+                              <p className="text-xs text-slate-500 font-normal break-words">
+                                {subNote}
+                              </p>
+                            ) : null;
+                          })()}
                           <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                             <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-semibold text-[11px] border border-slate-200/60">
                               {tx.phan_loai}
