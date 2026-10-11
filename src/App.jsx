@@ -1087,11 +1087,13 @@ export default function App() {
           onUpdateFunds={handleUpdateFunds}
         />
 
-        {/* Biểu đồ tròn cơ cấu chi tiêu & thu nhập theo phân loại */}
+        {/* Biểu đồ cơ cấu chi tiêu & thu nhập (hỗ trợ chuyển đổi Tròn/Cột & Lọc tháng) */}
         <CategoryPieChart
-          transactions={currentMonthTransactions}
+          transactions={transactions}
           privacyMode={privacyMode}
           currentMonth={currentMonth}
+          availableMonths={availableMonths}
+          onChangeMonth={setCurrentMonth}
         />
 
         {/* Khối nhập liệu nhanh gọn */}
