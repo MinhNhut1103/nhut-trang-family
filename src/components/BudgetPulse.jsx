@@ -62,9 +62,9 @@ export default function BudgetPulse({
     setIsEditingFunds(false);
   };
 
-  // Danh sách tháng cho dropdown
+  // Danh sách tháng cho dropdown (chỉ các tháng hợp lệ dạng YYYY-MM)
   const monthsList = availableMonths && availableMonths.length > 0 
-    ? availableMonths 
+    ? availableMonths.filter(m => /^\d{4}-\d{2}$/.test(m))
     : ['2026-10', '2026-09', '2026-08'];
 
   // Chuyển tháng trước / tháng sau

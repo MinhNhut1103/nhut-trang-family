@@ -532,14 +532,14 @@ export default function TransactionList({
                 className="w-full text-right text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer pl-1.5 truncate"
               >
                 <option value="current">
-                  {currentMonth?.includes('-') ? `Tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : currentMonth}
+                  {currentMonth && /^\d{4}-\d{2}$/.test(currentMonth) ? `Tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : 'Tháng hiện tại'}
                 </option>
                 <option value="all">Tất cả ({transactions.length} khoản)</option>
                 {availableMonths
-                  .filter(m => m !== currentMonth)
+                  .filter(m => m !== currentMonth && /^\d{4}-\d{2}$/.test(m))
                   .map(m => {
                     const parts = m.split('-');
-                    const label = parts.length === 2 ? `Tháng ${parts[1]}/${parts[0]}` : m;
+                    const label = `Tháng ${parts[1]}/${parts[0]}`;
                     return (
                       <option key={m} value={m}>
                         {label}

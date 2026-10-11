@@ -365,7 +365,9 @@ export default function App() {
         if (cloudConfigs && Array.isArray(cloudConfigs) && cloudConfigs.length > 0) {
           const merged = {};
           cloudConfigs.forEach((c) => {
-            if (c.id === 'app_categories' || c.id === 'system_ai_config') return;
+            // QUAN TRỌNG: Chỉ lấy các bản ghi là Tháng thực tế (định dạng YYYY-MM)
+            // Loại bỏ hoàn toàn các bản ghi meta hệ thống (savings_goals_meta, global_wallets, app_categories, system_ai_config...)
+            if (!/^\d{4}-\d{2}$/.test(c.id)) return;
             merged[c.id] = {
               id: c.id,
               banner_focus: c.banner_focus || '',
@@ -395,8 +397,8 @@ export default function App() {
           // Tự động kiểm tra và khởi tạo tháng hiện tại trên Supabase nếu chưa có
           const sysMonth = getSystemCurrentMonth();
           if (!merged[sysMonth]) {
-            const sortedKeys = Object.keys(merged).sort().reverse();
-            const lastMonthKey = sortedKeys[0];
+            const validMonthKeys = Object.keys(merged).filter(k => /^\d{4}-\d{2}$/.test(k)).sort().reverse();
+            const lastMonthKey = validMonthKeys[0];
             const lastHanMuc = lastMonthKey && merged[lastMonthKey]?.han_muc_chi
               ? Number(merged[lastMonthKey].han_muc_chi)
               : 30000000;
@@ -592,19 +594,22 @@ export default function App() {
     showToast(`Đã chuyển sang ${monthStr}`);
   };
 
-  // Tính danh sách các tháng có sẵn
+  // Tính danh sách các tháng có sẵn (BẮT BUỘC chỉ chứa các tháng hợp lệ dạng YYYY-MM)
   const availableMonths = useMemo(() => {
-    const set = new Set(Object.keys(monthlyConfigs));
-    set.add(currentMonth);
+    const set = new Set();
+    Object.keys(monthlyConfigs).forEach((k) => {
+      if (/^\d{4}-\d{2}$/.test(k)) set.add(k);
+    });
+    if (/^\d{4}-\d{2}$/.test(currentMonth)) set.add(currentMonth);
     set.add('2026-10');
     set.add('2026-09');
     set.add('2026-08');
     transactions.forEach((t) => {
-      if (t.ngay && t.ngay.length >= 7) {
+      if (t.ngay && /^\d{4}-\d{2}/.test(t.ngay)) {
         set.add(t.ngay.slice(0, 7));
       }
     });
-    return Array.from(set).sort().reverse();
+    return Array.from(set).filter(m => /^\d{4}-\d{2}$/.test(m)).sort().reverse();
   }, [monthlyConfigs, transactions, currentMonth]);
 
   // Cấu hình tháng hiện tại đang chọn

@@ -54,19 +54,24 @@ export default function CategoryPieChart({
     }
   }, [currentMonth]);
 
-  // Danh sách các tháng để chọn bộ lọc
+  // Danh sách các tháng để chọn bộ lọc (CHỈ chấp nhận các tháng hợp lệ dạng YYYY-MM)
   const monthFilterOptions = useMemo(() => {
-    const set = new Set(availableMonths || []);
-    if (currentMonth) set.add(currentMonth);
+    const set = new Set();
+    (availableMonths || []).forEach(m => {
+      if (/^\d{4}-\d{2}$/.test(m)) set.add(m);
+    });
+    if (currentMonth && /^\d{4}-\d{2}$/.test(currentMonth)) set.add(currentMonth);
     (transactions || []).forEach((t) => {
-      if (t.ngay && t.ngay.length >= 7) {
+      if (t.ngay && /^\d{4}-\d{2}/.test(t.ngay)) {
         set.add(t.ngay.slice(0, 7));
       }
     });
 
-    const sorted = Array.from(set).sort().reverse();
+    const sorted = Array.from(set).filter(m => /^\d{4}-\d{2}$/.test(m)).sort().reverse();
     const options = sorted.map((m) => {
-      const [y, mm] = m.split('-');
+      const parts = m.split('-');
+      const y = parts[0];
+      const mm = parts[1];
       return {
         value: m,
         label: `Tháng ${mm}/${y}`
@@ -277,7 +282,9 @@ export default function CategoryPieChart({
                 <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">
                   {selectedMonth === 'all' 
                     ? 'Toàn bộ thời gian' 
-                    : `Tháng ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}`} • {chartType === 'donut' ? 'Biểu đồ Tròn' : 'Biểu đồ Cột'}
+                    : /^\d{4}-\d{2}$/.test(selectedMonth)
+                    ? `Tháng ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}`
+                    : 'Tháng hiện tại'} • {chartType === 'donut' ? 'Biểu đồ Tròn' : 'Biểu đồ Cột'}
                 </p>
               </div>
             </div>

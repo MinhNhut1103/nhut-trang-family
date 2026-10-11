@@ -168,7 +168,7 @@ export default function MonthManagerModal({
 
           {/* Danh sách Pills chọn tháng */}
           <div className="flex flex-wrap gap-1.5">
-            {availableMonths.map((m) => {
+            {availableMonths.filter(m => /^\d{4}-\d{2}$/.test(m)).map((m) => {
               const isSelected = activeTabMonth === m;
               const isCurrentActive = currentMonth === m;
               return (
