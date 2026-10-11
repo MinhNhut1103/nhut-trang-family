@@ -40,7 +40,11 @@ import {
   getAppCategories,
   upsertAppCategories,
   subscribeToTransactions,
-  subscribeToMonthlyConfig
+  subscribeToMonthlyConfig,
+  getSavingsGoals,
+  upsertSavingsGoal,
+  deleteSavingsGoal,
+  subscribeToSavingsGoals
 } from './supabaseClient';
 import CategoryManagerModal from './components/CategoryManagerModal';
 import MemberManagerModal from './components/MemberManagerModal';
@@ -48,7 +52,9 @@ import MonthManagerModal from './components/MonthManagerModal';
 import TransactionModal from './components/TransactionModal';
 import AiSettingsModal from './components/AiSettingsModal';
 import AiAssistantChat from './components/AiAssistantChat';
+import { syncCloudAiConfigToLocal } from './services/geminiAiService';
 import DailyReminderCard from './components/DailyReminderCard';
+import SavingsGoalsSection from './components/SavingsGoalsSection';
 import LoginForm from './components/LoginForm';
 import { Check } from '@phosphor-icons/react';
 import { sanitizeMemberForStorage } from './utils/crypto';
@@ -176,6 +182,100 @@ export default function App() {
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
 
+  // Danh sách mục tiêu tiết kiệm: Lưu và đọc trực tiếp từ Supabase
+  const [goals, setGoals] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nt_family_savings_goals');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const handleAddGoal = async (newGoal) => {
+    const updated = [newGoal, ...goals];
+    setGoals(updated);
+    try {
+      localStorage.setItem('nt_family_savings_goals', JSON.stringify(updated));
+    } catch (e) {}
+
+    if (isSupabaseConfigured) {
+      try {
+        await upsertSavingsGoal(newGoal, updated);
+      } catch (err) {
+        console.error('Lỗi lưu mục tiêu vào Supabase:', err);
+      }
+    }
+  };
+
+  const handleUpdateGoal = async (updatedGoal) => {
+    const updated = goals.map((g) => (g.id === updatedGoal.id ? updatedGoal : g));
+    setGoals(updated);
+    try {
+      localStorage.setItem('nt_family_savings_goals', JSON.stringify(updated));
+    } catch (e) {}
+
+    if (isSupabaseConfigured) {
+      try {
+        await upsertSavingsGoal(updatedGoal, updated);
+      } catch (err) {
+        console.error('Lỗi cập nhật mục tiêu vào Supabase:', err);
+      }
+    }
+  };
+
+  const handleDeleteGoal = async (goalId) => {
+    const remaining = goals.filter((g) => g.id !== goalId);
+    setGoals(remaining);
+    try {
+      localStorage.setItem('nt_family_savings_goals', JSON.stringify(remaining));
+    } catch (e) {}
+
+    if (isSupabaseConfigured) {
+      try {
+        await deleteSavingsGoal(goalId, remaining);
+      } catch (err) {
+        console.error('Lỗi xóa mục tiêu khỏi Supabase:', err);
+      }
+    }
+  };
+
+  const handleDepositGoal = async (goalId, amountNum, author, note) => {
+    let targetGoalUpdated = null;
+    const updated = goals.map((g) => {
+      if (g.id === goalId) {
+        const newCurrent = (Number(g.current) || 0) + amountNum;
+        const newHistoryItem = {
+          id: 'h-' + Date.now(),
+          author: author || 'Nhựt',
+          amount: amountNum,
+          date: new Date().toISOString().split('T')[0],
+          note: note || 'Tích lũy'
+        };
+        targetGoalUpdated = {
+          ...g,
+          current: newCurrent,
+          history: [newHistoryItem, ...(g.history || [])]
+        };
+        return targetGoalUpdated;
+      }
+      return g;
+    });
+
+    setGoals(updated);
+    try {
+      localStorage.setItem('nt_family_savings_goals', JSON.stringify(updated));
+    } catch (e) {}
+
+    if (isSupabaseConfigured && targetGoalUpdated) {
+      try {
+        await upsertSavingsGoal(targetGoalUpdated, updated);
+      } catch (err) {
+        console.error('Lỗi nạp tiền mục tiêu vào Supabase:', err);
+      }
+    }
+  };
+
   // Modal Thêm / Sửa thu chi toàn cục (dùng cho cả DailyReminderCard và TransactionList)
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
@@ -198,6 +298,18 @@ export default function App() {
       handleUpdateTransaction(editingTx.id, txData);
     } else {
       handleAddTransaction(txData);
+    }
+  };
+
+  // Cuộn mượt đến nút thêm chi tiêu và tạo hiệu ứng nhấp nháy nổi bật
+  const handleScrollToAddExpense = () => {
+    const target = document.getElementById('btn-add-transaction') || document.getElementById('add-transaction-section');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('ring-4', 'ring-emerald-400', 'ring-offset-2');
+      setTimeout(() => {
+        target.classList.remove('ring-4', 'ring-emerald-400', 'ring-offset-2');
+      }, 1500);
     }
   };
 
@@ -230,11 +342,12 @@ export default function App() {
       }
 
       try {
-        const [cloudTxs, cloudConfigs, cloudMembers, cloudCategories] = await Promise.all([
+        const [cloudTxs, cloudConfigs, cloudMembers, cloudCategories, cloudGoals] = await Promise.all([
           getTransactions().catch((e) => { console.error('Lỗi tải transactions:', e); return null; }),
           getAllMonthlyConfigs().catch((e) => { console.error('Lỗi tải monthly_config:', e); return null; }),
           getFamilyMembers().catch((e) => { console.error('Lỗi tải family_members:', e); return null; }),
-          getAppCategories().catch((e) => { console.error('Lỗi tải app_categories:', e); return null; })
+          getAppCategories().catch((e) => { console.error('Lỗi tải app_categories:', e); return null; }),
+          getSavingsGoals().catch((e) => { console.error('Lỗi tải savings_goals:', e); return null; })
         ]);
 
         if (!isMounted) return;
@@ -252,7 +365,7 @@ export default function App() {
         if (cloudConfigs && Array.isArray(cloudConfigs) && cloudConfigs.length > 0) {
           const merged = {};
           cloudConfigs.forEach((c) => {
-            if (c.id === 'app_categories') return;
+            if (c.id === 'app_categories' || c.id === 'system_ai_config') return;
             merged[c.id] = {
               id: c.id,
               banner_focus: c.banner_focus || '',
@@ -262,6 +375,15 @@ export default function App() {
               tien_trong_the: Number(c.tien_trong_the) || 0
             };
           });
+
+          // Phục hồi cấu hình Quản gia AI dùng chung cho cả Nhựt & Trang từ Supabase
+          const sharedAi = cloudConfigs.find((c) => c.id === 'system_ai_config');
+          if (sharedAi?.ghi_chu) {
+            try {
+              const aiData = JSON.parse(sharedAi.ghi_chu);
+              syncCloudAiConfigToLocal(aiData);
+            } catch (e) {}
+          }
 
           // Phục hồi Số Tiền Hiện Có từ Supabase
           const globalWallet = cloudConfigs.find((c) => c.id === 'global_wallets');
@@ -317,6 +439,14 @@ export default function App() {
             setMacroTypes(cloudCategories.macroTypes);
           }
         }
+
+        // E. Cập nhật mục tiêu tiết kiệm từ Supabase
+        if (cloudGoals && Array.isArray(cloudGoals)) {
+          setGoals(cloudGoals);
+          try {
+            localStorage.setItem('nt_family_savings_goals', JSON.stringify(cloudGoals));
+          } catch (e) {}
+        }
       } catch (err) {
         console.error('Lỗi khi tải dữ liệu từ Supabase:', err);
       } finally {
@@ -357,6 +487,11 @@ export default function App() {
           if (parsed.categories) setCategories(parsed.categories);
           if (parsed.macroTypes) setMacroTypes(parsed.macroTypes);
         } catch (e) {}
+      } else if (payload.new && payload.new.id === 'system_ai_config' && payload.new.ghi_chu) {
+        try {
+          const parsed = JSON.parse(payload.new.ghi_chu);
+          syncCloudAiConfigToLocal(parsed);
+        } catch (e) {}
       } else if (payload.new && payload.new.id) {
         setMonthlyConfigs((prev) => ({
           ...prev,
@@ -372,10 +507,23 @@ export default function App() {
       }
     });
 
+    const unsubscribeGoals = subscribeToSavingsGoals(async () => {
+      try {
+        const freshGoals = await getSavingsGoals();
+        if (freshGoals && Array.isArray(freshGoals)) {
+          setGoals(freshGoals);
+          try {
+            localStorage.setItem('nt_family_savings_goals', JSON.stringify(freshGoals));
+          } catch (e) {}
+        }
+      } catch (e) {}
+    });
+
     return () => {
       isMounted = false;
       if (unsubscribeTx) unsubscribeTx();
       if (unsubscribeConfig) unsubscribeConfig();
+      if (unsubscribeGoals) unsubscribeGoals();
     };
   }, []);
 
@@ -733,7 +881,7 @@ export default function App() {
         transactions,
         monthlyConfigs,
         members,
-        goals: initialGoals
+        goals
       });
       showToast(`Đã đồng bộ ${res.transactionsCount} giao dịch lên Supabase!`);
       return { success: true, ...res };
@@ -900,6 +1048,7 @@ export default function App() {
         onOpenMemberManager={() => setIsMemberManagerOpen(true)}
         onSyncSupabase={handleSyncAllToSupabase}
         onOpenAiSettings={() => setIsAiSettingsOpen(true)}
+        onScrollToAddExpense={handleScrollToAddExpense}
       />
 
       {/* Nội dung chính: Khoảng trắng giữa tất cả các phần đều tăm tắp (space-y-3) */}
@@ -908,6 +1057,18 @@ export default function App() {
         <DailyReminderCard
           transactions={transactions}
           onOpenAddTransaction={handleOpenAddTx}
+          onShowToast={showToast}
+        />
+
+        {/* Section Mục Tiêu Tài Chính Gia Đình (Nằm dưới Nhắc Nhở) */}
+        <SavingsGoalsSection
+          goals={goals}
+          onAddGoal={handleAddGoal}
+          onUpdateGoal={handleUpdateGoal}
+          onDeleteGoal={handleDeleteGoal}
+          onDepositGoal={handleDepositGoal}
+          privacyMode={privacyMode}
+          activeUser={activeUser}
           onShowToast={showToast}
         />
 
@@ -982,7 +1143,7 @@ export default function App() {
         currentMonth={currentMonth}
         categories={categories}
         macroTypes={macroTypes}
-        goals={initialGoals}
+        goals={goals}
         monthlyConfigs={monthlyConfigs}
       />
 

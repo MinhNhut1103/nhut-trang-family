@@ -173,9 +173,9 @@ export default function CategoryPieChart({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 self-end sm:self-auto">
+          <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-2">
             {/* Toggle Thu / Chi */}
-            <div className="inline-flex rounded-xl p-0.5 bg-pink-50/50 border border-pink-200/80 text-xs">
+            <div className="flex-1 sm:flex-initial inline-flex justify-center rounded-xl p-0.5 bg-pink-50/50 border border-pink-200/80 text-xs">
               <button
                 type="button"
                 onClick={() => { setViewType('chi'); setHoveredCategory(null); }}

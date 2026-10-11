@@ -11,32 +11,62 @@ import {
   EyeSlash, 
   ArrowClockwise,
   FloppyDisk,
-  ShieldCheck
+  ShieldCheck,
+  ArrowSquareOut,
+  Users,
+  Lightning,
+  Gauge,
+  Clock,
+  Coins
 } from '@phosphor-icons/react';
-import { AVAILABLE_MODELS, getAiConfig, saveAiConfig, testAiConnection } from '../services/kiraAiService';
+import { 
+  AVAILABLE_MODELS, 
+  getAiConfig, 
+  saveAiConfig, 
+  testAiConnection, 
+  fetchSharedAiConfigFromCloud 
+} from '../services/geminiAiService';
 
 export default function AiSettingsModal({ isOpen, onClose, onSaveSuccess }) {
   const [formData, setFormData] = useState({
-    baseUrl: 'https://kiraai.vn/api/v1',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
     apiKey: '',
-    model: 'qwen3.8-max-free',
+    model: 'gemini-3.5-flash-lite',
   });
   const [showApiKey, setShowApiKey] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null); // { success: boolean, message: string }
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   // Khởi tạo giá trị khi mở modal
   useEffect(() => {
     if (isOpen) {
       const current = getAiConfig();
       setFormData({
-        baseUrl: current.baseUrl || 'https://kiraai.vn/api/v1',
+        baseUrl: current.baseUrl || 'https://generativelanguage.googleapis.com/v1beta',
         apiKey: current.apiKey || '',
-        model: current.model || 'qwen3.8-max-free',
+        model: current.model || 'gemini-3.5-flash-lite',
       });
       setTestResult(null);
       setSaveSuccess(false);
+
+      // Tự động kiểm tra bản lưu chung trên Supabase Cloud nếu local chưa có key
+      if (!current.apiKey) {
+        setIsSyncingCloud(true);
+        fetchSharedAiConfigFromCloud()
+          .then((cloudCfg) => {
+            if (cloudCfg && cloudCfg.apiKey) {
+              setFormData((prev) => ({
+                ...prev,
+                apiKey: cloudCfg.apiKey,
+                model: cloudCfg.model || prev.model,
+                baseUrl: cloudCfg.baseUrl || prev.baseUrl,
+              }));
+            }
+          })
+          .finally(() => setIsSyncingCloud(false));
+      }
     }
   }, [isOpen]);
 
@@ -60,12 +90,12 @@ export default function AiSettingsModal({ isOpen, onClose, onSaveSuccess }) {
       if (res.success) {
         setTestResult({
           success: true,
-          message: `Kết nối thành công! Phản hồi từ model ${formData.model}: "${res.reply.trim()}"`
+          message: `Kết nối thành công! Phản hồi từ Google AI Studio (${formData.model}): "${res.reply.trim()}"`
         });
       } else {
         setTestResult({
           success: false,
-          message: res.error || 'Kiểm tra thất bại. Vui lòng xem lại API Key hoặc Endpoint!'
+          message: res.error || 'Kiểm tra thất bại. Vui lòng kiểm tra lại API Key Google AI Studio!'
         });
       }
     } finally {
@@ -73,18 +103,20 @@ export default function AiSettingsModal({ isOpen, onClose, onSaveSuccess }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const ok = saveAiConfig(formData);
+    const ok = await saveAiConfig(formData);
     if (ok) {
       setSaveSuccess(true);
       if (onSaveSuccess) onSaveSuccess(formData);
       setTimeout(() => {
         setSaveSuccess(false);
         onClose();
-      }, 1000);
+      }, 1200);
     }
   };
+
+  const activeModelObj = AVAILABLE_MODELS.find(m => m.id === formData.model) || AVAILABLE_MODELS[0];
 
   return (
     <div 
@@ -93,7 +125,7 @@ export default function AiSettingsModal({ isOpen, onClose, onSaveSuccess }) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-2xl sm:rounded-3xl border border-pink-200/90 shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-pink-200/90 shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-scale-up">
         
         {/* Header Modal */}
         <div className="px-5 py-4 border-b border-pink-100 flex items-center justify-between bg-gradient-to-r from-pink-50/80 via-rose-50/40 to-white">
@@ -105,10 +137,10 @@ export default function AiSettingsModal({ isOpen, onClose, onSaveSuccess }) {
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
                 Cài Đặt Quản Gia AI
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">
-                  Quản gia nhà Nhựt Trang
+                  Google AI Studio / Gemini
                 </span>
               </h3>
-              <p className="text-xs text-slate-500">Cấu hình kết nối API thông minh để kích hoạt Quản gia</p>
+              <p className="text-xs text-slate-500">Cấu hình kết nối API & Lựa chọn mô hình với Rate Limit chi tiết</p>
             </div>
           </div>
           <button
@@ -122,52 +154,58 @@ export default function AiSettingsModal({ isOpen, onClose, onSaveSuccess }) {
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4">
           
-          {/* Thông tin bảo mật */}
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-pink-50/60 border border-pink-100 text-xs text-pink-900/90 leading-relaxed">
-            <ShieldCheck size={18} weight="fill" className="text-pink-600 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold">Bảo mật tuyệt đối:</span> Bạn có thể cấu hình API Key trực tiếp trong file <code className="bg-white px-1.5 py-0.5 rounded text-pink-700 border border-pink-200">.env</code> hoặc điền ngay tại form này. Key chỉ được lưu an toàn trên trình duyệt của bạn.
+          {/* Banner Thông Báo DÙNG CHUNG CẢ 2 TÀI KHOẢN (Nhập 1 lần dùng mãi mãi) */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50/60 to-white border border-emerald-200 text-xs text-emerald-950 shadow-2xs space-y-2">
+            <div className="flex items-start gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                <Users size={16} weight="fill" />
+              </div>
+              <div className="leading-relaxed">
+                <span className="font-bold text-emerald-900">Nhập 1 lần — Dùng chung cho cả 2 tài khoản (Nhựt & Trang):</span>
+                <p className="text-slate-600 mt-0.5 text-[11px]">
+                  Khi bạn lưu API Key hoặc đổi Model tại đây, hệ thống sẽ tự động đồng bộ lên <span className="font-semibold text-emerald-700">Supabase Cloud</span>. Cả tài khoản cậu chủ Nhựt và cô chủ Trang trên mọi thiết bị (laptop, điện thoại) đều dùng chung ngay lập tức mà không ai phải tự nhập lại!
+                </p>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] text-emerald-800 flex items-center gap-1 font-medium">
+                <ShieldCheck size={14} weight="fill" className="text-emerald-600" />
+                Hoàn toàn bảo mật trong database gia đình
+              </span>
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-white px-2.5 py-1 rounded-lg border border-emerald-200 shadow-2xs hover:bg-emerald-50 transition-colors"
+              >
+                Lấy API Key Google AI Studio miễn phí <ArrowSquareOut size={12} weight="bold" />
+              </a>
             </div>
           </div>
 
-          {/* 1. Endpoint chung */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <Globe size={14} weight="bold" className="text-pink-600" />
-              API Base URL / Endpoint
-            </label>
-            <input
-              type="text"
-              value={formData.baseUrl}
-              onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
-              placeholder="https://..."
-              required
-              className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-mono"
-            />
-            <p className="text-[11px] text-slate-400 mt-1">
-              Đường dẫn đầy đủ: <code className="text-slate-600 font-mono">{formData.baseUrl.replace(/\/+$/, '')}/chat/completions</code>
-            </p>
-          </div>
-
-          {/* 2. API Key */}
+          {/* 1. API Key Input */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Key size={14} weight="bold" className="text-pink-600" />
-                API Key (Khóa kết nối)
+                Google AI Studio API Key (Dùng chung cho cả Nhựt & Trang)
               </span>
-              {formData.apiKey && (
-                <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
-                  <CheckCircle size={12} weight="fill" /> Đã có khóa
+              {formData.apiKey ? (
+                <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <CheckCircle size={12} weight="fill" /> Đã có khóa chung
                 </span>
-              )}
+              ) : isSyncingCloud ? (
+                <span className="text-[10px] text-slate-400 flex items-center gap-1 animate-pulse">
+                  <ArrowClockwise size={12} className="animate-spin" /> Đang kiểm tra Cloud...
+                </span>
+              ) : null}
             </label>
             <div className="relative">
               <input
                 type={showApiKey ? 'text' : 'password'}
                 value={formData.apiKey}
                 onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                placeholder="Dán API Key của bạn..."
+                placeholder="Dán API Key Google AI Studio (bắt đầu bằng AIzaSy...)"
                 required
                 className="w-full px-3.5 py-2.5 pr-10 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-mono"
               />
@@ -179,22 +217,25 @@ export default function AiSettingsModal({ isOpen, onClose, onSaveSuccess }) {
                 {showApiKey ? <EyeSlash size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Bạn có thể đặt trước trong <code className="text-pink-700 font-mono">.env</code> qua biến <code className="text-pink-700 font-mono">VITE_GEMINI_API_KEY</code> hoặc điền trực tiếp tại đây.
+            </p>
           </div>
 
-          {/* 3. Dropdown Chọn Model AI */}
+          {/* 2. CHỌN MÔ HÌNH VÀ BẢNG THÔNG TIN RATE LIMIT */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                 <Cpu size={14} weight="bold" className="text-pink-600" />
-                Mô hình AI (Chọn qua Dropdown)
-              </span>
+                Mô hình AI & Rate Limit (Hạn mức sử dụng)
+              </label>
               <span className="text-[10px] text-pink-700 font-bold px-2 py-0.5 rounded-full bg-pink-100 border border-pink-200">
-                Mặc định: Kira Mini 1.0 ⭐
+                Mặc định: Gemini 3.5 Flash Lite ⭐
               </span>
-            </label>
+            </div>
 
             {/* Dropdown Menu chọn Model */}
-            <div className="relative">
+            <div className="relative mb-2.5">
               <select
                 value={formData.model}
                 onChange={(e) => setFormData({ ...formData, model: e.target.value })}
@@ -202,64 +243,131 @@ export default function AiSettingsModal({ isOpen, onClose, onSaveSuccess }) {
               >
                 {AVAILABLE_MODELS.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name} {m.isDefault ? '⭐ (Khuyên dùng)' : `(${m.badge})`} — {m.id}
+                    {m.name} — [{m.rpm} | {m.rpd} | {m.speed}]
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Thẻ hiển thị chi tiết Model đang chọn */}
-            {(() => {
-              const activeM = AVAILABLE_MODELS.find(m => m.id === formData.model) || AVAILABLE_MODELS[0];
-              return (
-                <div className="mt-2.5 p-3 rounded-xl bg-gradient-to-r from-pink-50/80 to-rose-50/50 border border-pink-200 text-xs flex items-start justify-between gap-3 animate-fade-in">
-                  <div>
-                    <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                      {activeM.name}
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        activeM.isDefault
-                          ? 'bg-pink-200 text-pink-800 border border-pink-300'
-                          : 'bg-white text-slate-700 border border-slate-200'
-                      }`}>
-                        {activeM.badge}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                      {activeM.description}
-                    </p>
+            {/* HỘP CHI TIẾT RATE LIMIT CỦA MODEL ĐANG CHỌN */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-pink-50/90 via-rose-50/50 to-white border border-pink-200 text-xs shadow-xs animate-fade-in space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-pink-200/60 pb-2">
+                <div>
+                  <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                    {activeModelObj.name}
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-200 text-pink-800 border border-pink-300">
+                      {activeModelObj.badge}
+                    </span>
                   </div>
-                  <div className="text-[10px] font-mono text-pink-700 font-bold bg-white px-2 py-1 rounded-lg border border-pink-200 shrink-0 shadow-xs">
-                    ID: {activeM.id}
-                  </div>
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                    {activeModelObj.description}
+                  </p>
                 </div>
-              );
-            })()}
+                <div className="text-[10px] font-mono text-pink-700 font-bold bg-white px-2 py-1 rounded-lg border border-pink-200 shrink-0 shadow-2xs">
+                  ID: {activeModelObj.id}
+                </div>
+              </div>
 
-            {/* Danh sách thẻ model bấm nhanh */}
-            <div className="mt-2.5 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-              {AVAILABLE_MODELS.map((m) => {
-                const isSelected = formData.model === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, model: m.id })}
-                    className={`p-2 rounded-xl border text-left transition-all tactile-btn flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-pink-500 bg-pink-50 ring-1 ring-pink-400 shadow-xs'
-                        : 'border-slate-200 bg-white hover:border-pink-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="font-bold text-[11px] text-slate-800 truncate">
-                      {m.name}
-                    </div>
-                    <div className="text-[9px] font-mono text-slate-400 truncate mt-0.5">
-                      {m.id}
-                    </div>
-                  </button>
-                );
-              })}
+              {/* Lưới thông số Rate Limits chi tiết */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="p-2 rounded-xl bg-white border border-pink-100 shadow-2xs">
+                  <div className="text-[10px] text-slate-400 font-medium flex items-center justify-center gap-1 mb-0.5">
+                    <Lightning size={12} weight="fill" className="text-amber-500" /> Tốc độ
+                  </div>
+                  <div className="font-bold text-slate-800 text-xs">{activeModelObj.speed}</div>
+                </div>
+
+                <div className="p-2 rounded-xl bg-white border border-pink-100 shadow-2xs">
+                  <div className="text-[10px] text-slate-400 font-medium flex items-center justify-center gap-1 mb-0.5">
+                    <Gauge size={12} weight="fill" className="text-blue-500" /> RPM (Phút)
+                  </div>
+                  <div className="font-bold text-emerald-700 text-xs">{activeModelObj.rpm}</div>
+                  <div className="text-[9px] text-slate-400">{activeModelObj.rpmDesc}</div>
+                </div>
+
+                <div className="p-2 rounded-xl bg-white border border-pink-100 shadow-2xs">
+                  <div className="text-[10px] text-slate-400 font-medium flex items-center justify-center gap-1 mb-0.5">
+                    <Clock size={12} weight="fill" className="text-indigo-500" /> RPD (Ngày)
+                  </div>
+                  <div className="font-bold text-indigo-700 text-xs">{activeModelObj.rpd}</div>
+                  <div className="text-[9px] text-slate-400">{activeModelObj.rpdDesc}</div>
+                </div>
+
+                <div className="p-2 rounded-xl bg-white border border-pink-100 shadow-2xs">
+                  <div className="text-[10px] text-slate-400 font-medium flex items-center justify-center gap-1 mb-0.5">
+                    <Coins size={12} weight="fill" className="text-emerald-500" /> Chi phí
+                  </div>
+                  <div className="font-bold text-emerald-700 text-xs">{activeModelObj.cost}</div>
+                  <div className="text-[9px] text-slate-400">{activeModelObj.tpm}</div>
+                </div>
+              </div>
             </div>
+
+            {/* DANH SÁCH THẺ BẤM NHANH TỪNG MODEL KÈM RATE LIMIT ĐỂ CHỌN CHỐT */}
+            <div className="mt-3">
+              <span className="text-[11px] font-semibold text-slate-600 block mb-1.5">
+                Bấm vào thẻ bên dưới để chọn chốt model phù hợp:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {AVAILABLE_MODELS.map((m) => {
+                  const isSelected = formData.model === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, model: m.id })}
+                      className={`p-2.5 rounded-xl border text-left transition-all tactile-btn flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-pink-500 bg-pink-50/80 ring-2 ring-pink-400 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-pink-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-1.5 w-full">
+                        <div className="font-bold text-xs text-slate-800 leading-tight">
+                          {m.name}
+                        </div>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
+                          isSelected ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {m.badge}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2 pt-1.5 border-t border-slate-100 text-[10px] w-full text-slate-500 font-mono">
+                        <span className="font-bold text-emerald-600">{m.rpm}</span>
+                        <span>•</span>
+                        <span>{m.rpd}</span>
+                        <span>•</span>
+                        <span className="text-slate-400">{m.speed}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Base URL tùy chỉnh */}
+          <div className="pt-1">
+            <details className="text-xs group">
+              <summary className="font-medium text-slate-500 hover:text-slate-700 cursor-pointer flex items-center gap-1.5">
+                <Globe size={13} />
+                Cấu hình nâng cao (API Endpoint URL)
+              </summary>
+              <div className="mt-2 pl-2 border-l-2 border-pink-200 space-y-1">
+                <input
+                  type="text"
+                  value={formData.baseUrl}
+                  onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
+                  placeholder="https://generativelanguage.googleapis.com/v1beta"
+                  required
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-pink-500 font-mono"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Mặc định: <code className="text-slate-600 font-mono">https://generativelanguage.googleapis.com/v1beta</code>
+                </p>
+              </div>
+            </details>
           </div>
 
           {/* Kết quả Test kết nối */}
@@ -281,9 +389,9 @@ export default function AiSettingsModal({ isOpen, onClose, onSaveSuccess }) {
           )}
 
           {saveSuccess && (
-            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center gap-2 animate-fade-in shadow-xs">
               <CheckCircle size={16} weight="fill" className="text-emerald-500" />
-              Đã lưu cấu hình Quản gia AI thành công!
+              Đã lưu và đồng bộ thành công lên Cloud cho cả 2 tài khoản (Nhựt & Trang)!
             </div>
           )}
 

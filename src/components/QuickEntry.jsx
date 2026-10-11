@@ -147,14 +147,14 @@ export default function QuickEntry({
         
         {/* Nút bấm nhanh thường dùng */}
         <div className="flex flex-col gap-2.5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span className="text-xs font-bold text-slate-800">
               Thêm nhanh thường dùng:
             </span>
             <button
               type="button"
               onClick={() => setIsAddingPreset(true)}
-              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors tactile-btn shadow-2xs"
+              className="self-start sm:self-auto text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors tactile-btn shadow-2xs"
               title="Tự tạo mục chi tiêu thường dùng"
             >
               <Plus size={13} weight="bold" />

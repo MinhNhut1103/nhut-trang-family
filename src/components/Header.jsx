@@ -22,7 +22,8 @@ export default function Header({
   onLogout,
   onOpenMemberManager,
   onSyncSupabase,
-  onOpenAiSettings
+  onOpenAiSettings,
+  onScrollToAddExpense
 }) {
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -53,10 +54,15 @@ export default function Header({
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-pink-200/90 px-3 md:px-8 py-2.5 md:py-3 shadow-xs shadow-pink-100/30">
       <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
         
-        {/* Tên ứng dụng */}
-        <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        {/* Tên ứng dụng & Nút cuộn nhanh xuống phần thêm chi tiêu */}
+        <button
+          type="button"
+          onClick={onScrollToAddExpense}
+          className="flex items-center gap-2 md:gap-3 shrink-0 text-left tactile-btn group cursor-pointer focus:outline-hidden rounded-xl p-1 -m-1 hover:bg-pink-50/70 active:bg-pink-100/70 transition-all"
+          title="Bấm để cuộn nhanh đến phần Thêm chi tiêu"
+        >
           {/* Logo NT nằm trong trái tim màu hồng */}
-          <div className="relative flex items-center justify-center shrink-0 w-9 h-9 md:w-10 md:h-10 transition-transform hover:scale-105" title="Nhựt & Trang">
+          <div className="relative flex items-center justify-center shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 transition-transform group-hover:scale-105 group-active:scale-95">
             <svg viewBox="0 0 32 32" className="w-full h-full drop-shadow-xs" fill="url(#pinkHeartHeader)">
               <defs>
                 <linearGradient id="pinkHeartHeader" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -74,18 +80,19 @@ export default function Header({
 
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm md:text-base font-bold text-slate-900 tracking-tight leading-tight">
-                Thu Chi <span className="hidden sm:inline">Gia Đình</span>
+              <h1 className="text-xs sm:text-sm md:text-base font-bold text-slate-900 group-hover:text-pink-600 tracking-tight leading-tight whitespace-nowrap transition-colors flex items-center gap-1">
+                <span>Thu Chi Gia Đình</span>
+                <span className="text-[10px] text-pink-500 opacity-60 group-hover:opacity-100 group-hover:translate-y-0.5 transition-all">↓</span>
               </h1>
-              <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200 hidden sm:inline-block">
+              <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200 hidden lg:inline-block whitespace-nowrap">
                 Nhựt & Trang 💕
               </span>
             </div>
             <p className="text-[10px] text-pink-700/70 font-medium hidden md:block">
-              Quản lý tài chính {currentMonth && currentMonth.includes('-') ? `tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : 'gia đình'}
+              Quản lý tài chính {currentMonth && currentMonth.includes('-') ? `tháng ${currentMonth.split('-')[1]}/${currentMonth.split('-')[0]}` : 'gia đình'} • <span className="underline decoration-pink-300">Nhấn để thêm chi tiêu</span>
             </p>
           </div>
-        </div>
+        </button>
 
         {/* Khu vực chọn người ghi & quản lý thành viên & cài đặt */}
         <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
@@ -101,28 +108,6 @@ export default function Header({
           >
             {isSupabaseConfigured ? 'Đã nối Supabase' : 'Lưu trên máy'}
           </button>
-
-          {/* Chọn nhanh người ghi theo danh sách thành viên */}
-          {members.length > 0 && (
-            <div className="flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200">
-              {members.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setActiveUser(m.username)}
-                  className={`px-2 py-1 rounded-lg text-[11px] md:text-xs font-semibold tactile-btn transition-all ${
-                    activeUser === m.username
-                      ? m.color === 'pink'
-                        ? 'bg-white text-pink-700 shadow-xs'
-                        : 'bg-white text-emerald-800 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title={`${m.name} (${m.role || 'Thành viên'})`}
-                >
-                  {m.name}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Nút Quản lý thành viên */}
           <button

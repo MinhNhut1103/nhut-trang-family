@@ -78,32 +78,7 @@ export const sampleSmsTemplates = [
   }
 ];
 
-export const initialGoals = [
-  {
-    id: 'g1',
-    title: 'Kỳ nghỉ gia đình hè 2026',
-    target: 45000000,
-    current: 34500000,
-    icon: 'AirplaneTilt',
-    color: 'emerald',
-  },
-  {
-    id: 'g2',
-    title: 'Quỹ dự phòng y tế & khẩn cấp',
-    target: 60000000,
-    current: 60000000,
-    icon: 'ShieldCheck',
-    color: 'blue',
-  },
-  {
-    id: 'g3',
-    title: 'Đổi xe máy mới cho Trang',
-    target: 35000000,
-    current: 22000000,
-    icon: 'Bicycle',
-    color: 'amber',
-  }
-];
+export const initialGoals = [];
 
 export function getRandomTime() {
   const hours = ['07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21'];

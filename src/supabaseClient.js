@@ -380,28 +380,76 @@ export async function deleteFamilyMember(id) {
 
 export async function getSavingsGoals() {
   if (!supabase) return null;
-  const { data, error } = await supabase
-    .from('savings_goals')
-    .select('*')
-    .order('created_at', { ascending: true });
-  
-  if (error) {
-    if (!isSchemaMissing(error)) {
-      console.error('Error fetching savings_goals from Supabase:', error);
+  try {
+    const [goalsRes, metaRes] = await Promise.all([
+      supabase.from('savings_goals').select('*').order('created_at', { ascending: true }),
+      supabase.from('monthly_config').select('*').eq('id', 'savings_goals_meta').maybeSingle()
+    ]);
+
+    if (goalsRes.error) {
+      if (!isSchemaMissing(goalsRes.error)) {
+        console.error('Error fetching savings_goals from Supabase:', goalsRes.error);
+      }
+      return null;
     }
+
+    const rows = goalsRes.data || [];
+    let metaMap = {};
+    if (metaRes.data?.ghi_chu) {
+      try {
+        metaMap = JSON.parse(metaRes.data.ghi_chu) || {};
+      } catch (e) {}
+    }
+
+    return rows.map((row) => {
+      const meta = metaMap[row.id] || {};
+      return {
+        id: row.id,
+        title: row.title,
+        target: Number(row.target) || 0,
+        current: Number(row.current) || 0,
+        icon: row.icon || 'Target',
+        color: row.color || 'emerald',
+        category: meta.category || 'Gia đình',
+        deadline: meta.deadline || '',
+        history: Array.isArray(meta.history) ? meta.history : []
+      };
+    });
+  } catch (err) {
+    console.error('Error in getSavingsGoals:', err);
     return null;
   }
-  return data;
 }
 
-export async function upsertSavingsGoal(goal) {
+export async function saveSavingsGoalsMeta(goals = []) {
+  if (!supabase) return;
+  try {
+    const metaMap = {};
+    goals.forEach((g) => {
+      metaMap[g.id] = {
+        category: g.category || 'Gia đình',
+        deadline: g.deadline || '',
+        history: g.history || []
+      };
+    });
+    await supabase.from('monthly_config').upsert({
+      id: 'savings_goals_meta',
+      ghi_chu: JSON.stringify(metaMap),
+      updated_at: new Date().toISOString()
+    });
+  } catch (e) {
+    console.error('Error saving savings_goals_meta:', e);
+  }
+}
+
+export async function upsertSavingsGoal(goal, allGoals = null) {
   if (!supabase) return null;
   const payload = {
     id: goal.id,
     title: goal.title,
     target: Number(goal.target) || 0,
     current: Number(goal.current) || 0,
-    icon: goal.icon || 'ShieldCheck',
+    icon: goal.icon || 'Target',
     color: goal.color || 'emerald'
   };
 
@@ -409,12 +457,79 @@ export async function upsertSavingsGoal(goal) {
     .from('savings_goals')
     .upsert(payload)
     .select();
-  
+
   if (error) {
     console.error('Error upserting savings goal:', error);
     throw error;
   }
-  return data[0];
+
+  if (allGoals && Array.isArray(allGoals)) {
+    await saveSavingsGoalsMeta(allGoals);
+  } else {
+    // Cập nhật meta cho goal đơn lẻ
+    const { data: curMeta } = await supabase.from('monthly_config').select('ghi_chu').eq('id', 'savings_goals_meta').maybeSingle();
+    let metaMap = {};
+    if (curMeta?.ghi_chu) {
+      try { metaMap = JSON.parse(curMeta.ghi_chu) || {}; } catch (e) {}
+    }
+    metaMap[goal.id] = {
+      category: goal.category || 'Gia đình',
+      deadline: goal.deadline || '',
+      history: goal.history || []
+    };
+    await supabase.from('monthly_config').upsert({
+      id: 'savings_goals_meta',
+      ghi_chu: JSON.stringify(metaMap),
+      updated_at: new Date().toISOString()
+    });
+  }
+
+  return data?.[0] || goal;
+}
+
+export async function deleteSavingsGoal(goalId, remainingGoals = null) {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from('savings_goals')
+    .delete()
+    .eq('id', goalId);
+
+  if (error) {
+    console.error('Error deleting savings goal:', error);
+    throw error;
+  }
+
+  if (remainingGoals && Array.isArray(remainingGoals)) {
+    await saveSavingsGoalsMeta(remainingGoals);
+  } else {
+    const { data: curMeta } = await supabase.from('monthly_config').select('ghi_chu').eq('id', 'savings_goals_meta').maybeSingle();
+    if (curMeta?.ghi_chu) {
+      try {
+        const metaMap = JSON.parse(curMeta.ghi_chu) || {};
+        delete metaMap[goalId];
+        await supabase.from('monthly_config').upsert({
+          id: 'savings_goals_meta',
+          ghi_chu: JSON.stringify(metaMap),
+          updated_at: new Date().toISOString()
+        });
+      } catch (e) {}
+    }
+  }
+
+  return true;
+}
+
+export function subscribeToSavingsGoals(callback) {
+  if (!supabase) return null;
+  const channel = supabase
+    .channel('savings_goals_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals' }, (payload) => {
+      if (callback) callback(payload);
+    })
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 // ==========================================
@@ -477,6 +592,7 @@ export async function syncAllLocalToSupabase({ transactions = [], monthlyConfigs
     }));
     const { error: goalErr } = await supabase.from('savings_goals').upsert(goalPayload);
     if (goalErr) throw goalErr;
+    await saveSavingsGoalsMeta(goals);
     results.goalsCount = goalPayload.length;
   }
 
@@ -544,6 +660,55 @@ export async function upsertAppCategories(categories, macroTypes) {
     console.error('Error saving app_categories to Supabase:', error);
   }
   return data ? data[0] : null;
+}
+
+// ==========================================
+// 7.1 CẤU HÌNH QUẢN GIA AI DÙNG CHUNG CẢ GIA ĐÌNH (SUPABASE CLOUD)
+// Nhập 1 lần dùng chung cho cả Nhựt & Trang trên mọi thiết bị
+// ==========================================
+
+export async function getSharedAiConfig() {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('monthly_config')
+      .select('ghi_chu')
+      .eq('id', 'system_ai_config')
+      .single();
+
+    if (error || !data?.ghi_chu) return null;
+    return JSON.parse(data.ghi_chu);
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function upsertSharedAiConfig(aiConfig) {
+  if (!supabase) return null;
+  try {
+    const payload = {
+      id: 'system_ai_config',
+      banner_focus: 'Cấu hình Quản gia AI Google (Dùng chung cả nhà)',
+      ghi_chu: JSON.stringify({
+        apiKey: (aiConfig.apiKey || '').trim(),
+        model: aiConfig.model || 'gemini-3.5-flash-lite',
+        baseUrl: (aiConfig.baseUrl || 'https://generativelanguage.googleapis.com/v1beta').trim(),
+        updated_at: new Date().toISOString()
+      }),
+      updated_at: new Date().toISOString()
+    };
+    const { data, error } = await supabase
+      .from('monthly_config')
+      .upsert(payload)
+      .select();
+    if (error) {
+      console.error('Error saving system_ai_config to Supabase:', error);
+    }
+    return data ? data[0] : null;
+  } catch (err) {
+    console.error('Error in upsertSharedAiConfig:', err);
+    return null;
+  }
 }
 
 // ==========================================

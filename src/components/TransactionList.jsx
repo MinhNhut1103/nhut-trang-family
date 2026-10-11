@@ -416,11 +416,12 @@ export default function TransactionList({
         <div className="p-3.5 sm:p-4 bg-gradient-to-r from-pink-50/40 via-white to-pink-50/20 border-b border-pink-200/80 space-y-2.5">
           
           {/* HÀNG 1: NÚT HÀNH ĐỘNG CHÍNH - THÊM THU CHI (100% WIDTH TRÊN MOBILE) */}
-          <div className="w-full flex items-center justify-between gap-2">
+          <div id="add-transaction-section" className="w-full flex items-center justify-between gap-2 scroll-mt-24">
             <button
+              id="btn-add-transaction"
               onClick={handleOpenAdd}
               type="button"
-              className="w-full py-2.5 sm:py-3 px-4 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xs transition-colors tactile-btn"
+              className="w-full py-2.5 sm:py-3 px-4 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xs transition-all tactile-btn"
               title="Thêm khoản thu chi mới vào sổ"
             >
               <Plus size={18} weight="bold" />

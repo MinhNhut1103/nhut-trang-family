@@ -16,8 +16,25 @@ import {
   Copy,
   ArrowRight
 } from '@phosphor-icons/react';
-import { sendChatMessageToAi, getAiConfig, saveAiConfig, AVAILABLE_MODELS } from '../services/kiraAiService';
+import { sendChatMessageToAi, getAiConfig, saveAiConfig, AVAILABLE_MODELS } from '../services/geminiAiService';
 import { normalizeDateISO, formatDateDisplay } from '../data/initialData';
+
+/**
+ * Kiểm tra xem giao dịch có phải do Quản gia thêm hay không
+ * (có nhãn Quản gia nhập / is_ai: true / tag / created_by)
+ */
+export const isAiTx = (t) => Boolean(
+  t && (
+    t.is_ai || 
+    t.created_by === 'ai' || 
+    t.tag === 'Quản gia nhập' ||
+    (t.ghi_chu && (
+      t.ghi_chu.includes('Quản gia nhập') || 
+      t.ghi_chu.includes('Quản gia') || 
+      t.ghi_chu.includes('AI nhập')
+    ))
+  )
+);
 
 /**
  * Component hiển thị nội dung tin nhắn tinh tế, gọn gàng
@@ -155,21 +172,33 @@ export default function AiAssistantChat({
   categories = [],
   macroTypes = [],
 }) {
-  const [messages, setMessages] = useState(() => {
-    return [
-      {
-        id: 'msg-welcome',
-        role: 'assistant',
-        content: 'Dạ Quản gia xin kính chào ạ! 💕\n\nDạ cho em xin phép hỏi em đang được vinh hạnh phục vụ **cậu chủ Nhựt** hay **cô chủ Trang** thế ạ? ✨ Cậu chủ / cô chủ cứ dặn dò em ghi chép thu chi hoặc phân tích sổ sách nhé!',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        askWho: true,
+  const getWelcomeMessage = (username) => {
+    const isTrang = username === 'trang';
+    const roleName = isTrang ? 'cô chủ Trang 🌸' : 'cậu chủ Nhựt 👑';
+    const pronoun = isTrang ? 'cô chủ' : 'cậu chủ';
+    return {
+      id: 'msg-welcome',
+      role: 'assistant',
+      content: `Dạ Quản gia xin kính chào **${roleName}** ạ! 💕\n\nEm đã sẵn sàng phục vụ ${pronoun} rồi ạ. Cứ dặn dò em ghi chép thu chi, cập nhật sổ sách hoặc hỏi đáp phân tích tài chính nhé! ✨`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+  };
+
+  const [messages, setMessages] = useState(() => [getWelcomeMessage(activeUser)]);
+
+  // Tự động cập nhật lời chào nếu tài khoản đăng nhập thay đổi khi chưa chat
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === 'msg-welcome') {
+        return [getWelcomeMessage(activeUser)];
       }
-    ];
-  });
+      return prev;
+    });
+  }, [activeUser]);
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(() => getAiConfig().model || 'kira-mini-1.0');
+  const [selectedModel, setSelectedModel] = useState(() => getAiConfig().model || 'gemini-3.5-flash-lite');
   const [copiedMsgId, setCopiedMsgId] = useState(null);
 
   const handleCopyMessage = async (msgId, content) => {
@@ -200,7 +229,7 @@ export default function AiAssistantChat({
   // Đồng bộ model khi mở chat
   useEffect(() => {
     if (isOpen) {
-      setSelectedModel(getAiConfig().model || 'kira-mini-1.0');
+      setSelectedModel(getAiConfig().model || 'gemini-3.5-flash-lite');
     }
   }, [isOpen]);
 
@@ -300,21 +329,12 @@ export default function AiAssistantChat({
     setMessages((prev) => [...prev, newUserMsg]);
     setInput('');
 
-    const isAiTx = (t) => Boolean(
-      t.is_ai || 
-      t.created_by === 'ai' || 
-      t.tag === 'Quản gia nhập' ||
-      (t.ghi_chu && (
-        t.ghi_chu.includes('Quản gia nhập') || 
-        t.ghi_chu.includes('Quản gia') || 
-        t.ghi_chu.includes('AI nhập')
-      ))
-    );
     const aiTransactions = transactions.filter(isAiTx);
 
-    // ⚡ TỐI ƯU SIÊU TỐC: Xử lý tức thì lệnh XÓA (0.01 giây - không cần chờ mạng AI)
+    // ⚡ TỐI ƯU SIÊU TỐC & BẢO VỆ DỮ LIỆU: Kiểm tra lệnh XÓA và SỬA
     const lowerQuery = query.toLowerCase();
     const isDeleteCommand = /(?:xóa|xoá|hủy|huỷ|bỏ|delete|remove)\s+(?:khoản|mục|giao dịch|món|chi tiêu)?/i.test(lowerQuery);
+    const isEditCommand = /(?:sửa|đổi|chỉnh|cập nhật|update|edit)\s+(?:khoản|mục|giao dịch|món|chi tiêu)?/i.test(lowerQuery);
 
     if (isDeleteCommand) {
       let matchedTx = null;
@@ -361,12 +381,33 @@ export default function AiAssistantChat({
             {
               id: 'msg-' + Date.now(),
               role: 'assistant',
-              content: `Dạ thưa cậu chủ/cô chủ, khoản **${manualMatch.noi_dung}** không có nhãn 🤖 Quản gia nhập (do chủ nhà tự nhập tay vào sổ). Quản gia chỉ được phép can thiệp xóa các khoản do Quản gia nhập để bảo toàn dữ liệu gốc ạ! Cậu chủ / cô chủ vui lòng thao tác trực tiếp trên Bảng danh sách giúp em nhé! 💕`,
+              content: `Dạ thưa cậu chủ/cô chủ, khoản **${manualMatch.noi_dung}** là do gia đình mình tự nhập tay vào sổ (không có nhãn 🤖 Quản gia nhập). Quản gia chỉ có quyền thêm, xóa, sửa các khoản do Quản gia nhập để bảo toàn 100% dữ liệu gốc của gia đình ạ! Cậu chủ / cô chủ vui lòng thao tác trực tiếp trên Bảng danh sách giúp em nhé! 💕`,
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             }
           ]);
           return;
         }
+      }
+    }
+
+    if (isEditCommand) {
+      // Kiểm tra xem có yêu cầu sửa khoản tự nhập tay không
+      const manualMatch = transactions.find((tx) => {
+        if (isAiTx(tx)) return false;
+        const name = (tx.noi_dung || '').toLowerCase();
+        return name && lowerQuery.includes(name);
+      });
+      if (manualMatch) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'msg-' + Date.now(),
+            role: 'assistant',
+            content: `Dạ thưa cậu chủ/cô chủ, khoản **${manualMatch.noi_dung}** là do gia đình mình tự nhập tay vào sổ (không có nhãn 🤖 Quản gia nhập). Quản gia chỉ được phép can thiệp thêm, xóa, sửa những khoản do Quản gia nhập để bảo toàn 100% dữ liệu gốc của chủ nhà ạ! Cậu chủ / cô chủ vui lòng bấm nút sửa trực tiếp trên Bảng danh sách giúp em nhé! 💕`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }
+        ]);
+        return;
       }
     }
 
@@ -475,6 +516,8 @@ export default function AiAssistantChat({
               tx: found,
               msgId: 'msg-' + Date.now(),
             });
+          } else if (found && !isAiTx(found)) {
+            res.reply = `Dạ thưa cậu chủ/cô chủ, khoản **${found.noi_dung}** là do gia đình tự nhập tay vào sổ (không có nhãn 🤖 Quản gia nhập). Quản gia chỉ được phép can thiệp xóa các khoản do Quản gia nhập để bảo toàn 100% dữ liệu gốc ạ! Cậu chủ / cô chủ vui lòng thao tác trực tiếp trên Bảng danh sách giúp em nhé! 💕`;
           }
         }
 
@@ -497,8 +540,21 @@ export default function AiAssistantChat({
               }
               delete formattedUpdates.so_tien;
             }
+            // Đảm bảo luôn duy trì tag và thuộc tính nhận diện Quản gia nhập
+            formattedUpdates.is_ai = true;
+            formattedUpdates.created_by = 'ai';
+            formattedUpdates.tag = 'Quản gia nhập';
+            if (formattedUpdates.ghi_chu) {
+              if (!formattedUpdates.ghi_chu.includes('Quản gia nhập')) {
+                formattedUpdates.ghi_chu = `Quản gia nhập - ${formattedUpdates.ghi_chu}`;
+              }
+            } else {
+              formattedUpdates.ghi_chu = target.ghi_chu || 'Quản gia nhập';
+            }
             await onUpdateTransaction(targetId, formattedUpdates);
             updatedTx = { targetId, noi_dung: updates.noi_dung || target.noi_dung, updates };
+          } else if (target && !isAiTx(target)) {
+            res.reply = `Dạ thưa cậu chủ/cô chủ, khoản **${target.noi_dung}** là do gia đình mình tự nhập tay vào sổ (không có nhãn 🤖 Quản gia nhập). Quản gia chỉ được phép can thiệp thêm, xóa, sửa các khoản do Quản gia nhập để bảo toàn 100% dữ liệu gốc của chủ nhà ạ! Cậu chủ / cô chủ vui lòng bấm nút sửa trực tiếp trên Bảng danh sách giúp em nhé! 💕`;
           }
         }
       }
@@ -589,6 +645,14 @@ export default function AiAssistantChat({
   const handleConfirmDeleteFromModal = async () => {
     const tx = deleteConfirmModal.tx;
     if (!tx || !tx.id || !onDeleteTransaction) return;
+
+    // Bảo vệ an toàn dữ liệu: Tuyệt đối không cho phép xóa khoản do chủ nhà tự nhập tay
+    if (!isAiTx(tx)) {
+      alert('Dạ thưa cậu chủ/cô chủ, khoản này do gia đình tự nhập tay vào sổ nên Quản gia không được phép xóa để bảo toàn dữ liệu gốc ạ!');
+      setDeleteConfirmModal({ isOpen: false, tx: null, msgId: null });
+      return;
+    }
+
     try {
       await onDeleteTransaction(tx.id);
       const amountVal = tx.thu || tx.chi || tx.so_tien || 0;
@@ -666,15 +730,7 @@ export default function AiAssistantChat({
 
   const handleClearHistory = () => {
     if (window.confirm('Bạn có muốn xóa toàn bộ lịch sử trò chuyện này không?')) {
-      setMessages([
-        {
-          id: 'msg-welcome',
-          role: 'assistant',
-          content: 'Dạ Quản gia xin kính chào ạ! 💕\n\nDạ cho em xin phép hỏi em đang được vinh hạnh phục vụ **cậu chủ Nhựt** hay **cô chủ Trang** thế ạ? ✨ Cậu chủ / cô chủ cứ dặn dò em nhé!',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          askWho: true,
-        }
-      ]);
+      setMessages([getWelcomeMessage(activeUser)]);
     }
   };
 
@@ -833,24 +889,6 @@ export default function AiAssistantChat({
                   >
                     {/* Nội dung tin nhắn (hỗ trợ format tinh tế, tránh lộ raw markdown) */}
                     <FormattedMessage content={m.content} isUser={isUser} />
-
-                    {/* Nút chọn nhanh danh tính Cậu chủ Nhựt / Cô chủ Trang */}
-                    {m.askWho && (
-                      <div className="mt-2.5 pt-2 border-t border-pink-100 flex items-center gap-2">
-                        <button
-                          onClick={() => handleSend('Tôi là cậu chủ Nhựt')}
-                          className="flex-1 py-1.5 px-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold text-[11px] flex items-center justify-center gap-1 tactile-btn transition-all shadow-xs"
-                        >
-                          👑 Cậu chủ Nhựt
-                        </button>
-                        <button
-                          onClick={() => handleSend('Tôi là cô chủ Trang')}
-                          className="flex-1 py-1.5 px-2.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 font-semibold text-[11px] flex items-center justify-center gap-1 tactile-btn transition-all shadow-xs"
-                        >
-                          🌸 Cô chủ Trang
-                        </button>
-                      </div>
-                    )}
 
                     {/* Nút bấm nhanh nếu báo thiếu API Key */}
                     {m.needsApiKey && (
