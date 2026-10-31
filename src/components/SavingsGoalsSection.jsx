@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Target, 
   Sparkle, 
@@ -28,7 +28,7 @@ import confetti from 'canvas-confetti';
 
 const STORAGE_KEY = 'nt_family_savings_goals';
 
-// 3 mục tiêu gợi ý mẫu ban đầu cho Nhựt & Trang để trải nghiệm giao diện
+// 3 mục tiêu gợi ý mẫu ban đầu cho Nhựt & Trang để trải nghiệm giao diện (gắn với Tháng 10/2026)
 const DEFAULT_SAMPLE_GOALS = [
   {
     id: 'goal-1',
@@ -37,6 +37,7 @@ const DEFAULT_SAMPLE_GOALS = [
     target: 15000000,
     current: 9500000,
     deadline: '2026-11-20',
+    month: '2026-10',
     icon: 'AirplaneTilt',
     color: 'emerald', // emerald, rose, blue, amber, purple
     history: [
@@ -51,6 +52,7 @@ const DEFAULT_SAMPLE_GOALS = [
     target: 25000000,
     current: 12000000,
     deadline: '2026-12-31',
+    month: '2026-10',
     icon: 'House',
     color: 'indigo',
     history: [
@@ -65,6 +67,7 @@ const DEFAULT_SAMPLE_GOALS = [
     target: 50000000,
     current: 35000000,
     deadline: '2027-01-15',
+    month: '2026-10',
     icon: 'TrendUp',
     color: 'rose',
     history: [
@@ -131,6 +134,8 @@ const COLOR_THEMES = {
 
 export default function SavingsGoalsSection({
   goals: propGoals = null,
+  currentMonth = '2026-10',
+  availableMonths = [],
   onAddGoal,
   onUpdateGoal,
   onDeleteGoal,
@@ -148,9 +153,43 @@ export default function SavingsGoalsSection({
     }
   });
 
-  const goals = propGoals !== null && Array.isArray(propGoals) ? propGoals : localGoals;
+  const allGoals = propGoals !== null && Array.isArray(propGoals) ? propGoals : localGoals;
 
-  const [isExpanded, setIsExpanded] = useState(true);
+  // Lọc mục tiêu ăn theo tháng: mỗi tháng hiển thị mục tiêu riêng, tháng mới chưa có thì trống
+  const goals = useMemo(() => {
+    return allGoals.filter(g => {
+      const gMonth = g.month || (g.deadline ? g.deadline.slice(0, 7) : '2026-10');
+      return gMonth === currentMonth;
+    });
+  }, [allGoals, currentMonth]);
+
+  const formatMonthDisplay = (mStr) => {
+    if (!mStr || !mStr.includes('-')) return mStr || 'Tháng này';
+    const [year, month] = mStr.split('-');
+    return `Tháng ${month}/${year}`;
+  };
+
+  const currentMonthLabel = formatMonthDisplay(currentMonth);
+
+  // Trạng thái mở rộng / thu gọn: Mặc định thu gọn, khi nào bấm bật mới full ra theo yêu cầu
+  const [isExpanded, setIsExpanded] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nt_goals_expanded');
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const handleToggleExpanded = () => {
+    setIsExpanded(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('nt_goals_expanded', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
 
   // Modal Nạp tiền tích lũy
   const [depositModal, setDepositModal] = useState({
@@ -171,6 +210,7 @@ export default function SavingsGoalsSection({
     target: '',
     current: '',
     deadline: '',
+    month: currentMonth,
     icon: 'Target',
     color: 'rose'
   });
@@ -181,14 +221,14 @@ export default function SavingsGoalsSection({
     goal: null
   });
 
-  // Lưu localStorage mỗi khi goals thay đổi
+  // Lưu localStorage mỗi khi allGoals thay đổi
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(goals));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allGoals));
     } catch (e) {
       console.warn('Lỗi lưu goals vào localStorage:', e);
     }
-  }, [goals]);
+  }, [allGoals]);
 
   const formatMoney = (val) => {
     if (privacyMode) return '•••••• đ';
@@ -296,6 +336,7 @@ export default function SavingsGoalsSection({
       target: '',
       current: '0',
       deadline: '',
+      month: currentMonth,
       icon: 'Target',
       color: 'rose'
     });
@@ -312,6 +353,7 @@ export default function SavingsGoalsSection({
       target: String(goal.target || ''),
       current: String(goal.current || 0),
       deadline: goal.deadline || '',
+      month: goal.month || currentMonth,
       icon: goal.icon || 'Target',
       color: goal.color || 'rose'
     });
@@ -325,7 +367,7 @@ export default function SavingsGoalsSection({
     if (!goalModal.title.trim() || targetNum <= 0) return;
 
     if (goalModal.isEdit) {
-      const existing = goals.find(g => g.id === goalModal.goalId);
+      const existing = allGoals.find(g => g.id === goalModal.goalId);
       const updatedGoal = {
         ...existing,
         id: goalModal.goalId,
@@ -334,6 +376,7 @@ export default function SavingsGoalsSection({
         target: targetNum,
         current: currentNum,
         deadline: goalModal.deadline,
+        month: goalModal.month || existing?.month || currentMonth || '2026-10',
         icon: goalModal.icon,
         color: goalModal.color,
         history: existing?.history || []
@@ -353,6 +396,7 @@ export default function SavingsGoalsSection({
         target: targetNum,
         current: currentNum,
         deadline: goalModal.deadline,
+        month: goalModal.month || currentMonth || '2026-10',
         icon: goalModal.icon,
         color: goalModal.color,
         history: currentNum > 0 ? [{
@@ -369,10 +413,10 @@ export default function SavingsGoalsSection({
       } else {
         setLocalGoals(prev => [newGoal, ...prev]);
       }
-      if (onShowToast) onShowToast(`Đã thêm mục tiêu mới: "${newGoal.title}" 💕`);
+      if (onShowToast) onShowToast(`Đã thêm mục tiêu mới: "${newGoal.title}" (${currentMonthLabel}) 💕`);
     }
 
-    setGoalModal({ isOpen: false, isEdit: false, goalId: null, title: '', category: '', target: '', current: '', deadline: '', icon: 'Target', color: 'rose' });
+    setGoalModal({ isOpen: false, isEdit: false, goalId: null, title: '', category: '', target: '', current: '', deadline: '', month: currentMonth, icon: 'Target', color: 'rose' });
   };
 
   // Xóa mục tiêu
@@ -392,7 +436,7 @@ export default function SavingsGoalsSection({
       <div className="card-soft p-3.5 sm:p-5 bg-gradient-to-br from-white via-pink-50/25 to-rose-50/15 border border-pink-200/90 shadow-xs shadow-pink-100/30 transition-all">
       
       {/* 1. Header Mục Tiêu Tài Chính */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-pink-100">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isExpanded ? 'pb-3 border-b border-pink-100' : ''}`}>
         <div className="flex items-center gap-2.5 sm:gap-3 w-full min-w-0">
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-amber-400 text-white flex items-center justify-center shadow-xs shrink-0">
             <Target size={22} weight="bold" />
@@ -400,126 +444,142 @@ export default function SavingsGoalsSection({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight whitespace-nowrap">
-                Mục Tiêu Tài Chính
+                Mục Tiêu Tài Chính {currentMonthLabel}
               </h3>
               <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 border border-pink-200 whitespace-nowrap shrink-0">
                 {completedCount}/{goals.length} Đạt 🏆
               </span>
+              <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap shrink-0">
+                {overallPercentage}%
+              </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 whitespace-nowrap">
-              Kế hoạch tích lũy & dự định của Nhựt & Trang 💕
+            <p className="text-xs text-slate-500 mt-0.5 whitespace-nowrap truncate">
+              {isExpanded 
+                ? `Kế hoạch tích lũy & dự định của ${currentMonthLabel} 💕` 
+                : goals.length > 0
+                ? `Đã có: ${formatMoney(totalCurrent)} / Mục tiêu: ${formatMoney(totalTarget)}`
+                : `Chưa có mục tiêu cho ${currentMonthLabel} • Bấm để thêm`
+              }
             </p>
           </div>
         </div>
 
         {/* Nút thao tác: Nằm bên dưới tiêu đề trên mobile, ngang hàng trên desktop */}
         <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-0.5 sm:pt-0">
-          <button
-            type="button"
-            onClick={handleOpenCreateGoal}
-            className="flex-1 sm:flex-initial py-2 sm:py-1.5 px-4 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:scale-98 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 tactile-btn transition-all whitespace-nowrap"
-          >
-            <Plus size={14} weight="bold" />
-            <span>Thêm mục tiêu</span>
-          </button>
+          {isExpanded && (
+            <button
+              type="button"
+              onClick={handleOpenCreateGoal}
+              className="flex-1 sm:flex-initial py-2 sm:py-1.5 px-4 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:scale-98 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 tactile-btn transition-all whitespace-nowrap cursor-pointer"
+            >
+              <Plus size={14} weight="bold" />
+              <span>Thêm mục tiêu</span>
+            </button>
+          )}
 
           <button
             type="button"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="py-2 sm:py-1.5 px-3 rounded-xl border border-slate-200 hover:border-pink-300 hover:bg-pink-50/50 text-slate-600 text-xs tactile-btn transition-colors shrink-0 flex items-center justify-center gap-1"
-            title={isExpanded ? 'Thu gọn' : 'Mở rộng'}
+            onClick={handleToggleExpanded}
+            className={`py-2 sm:py-1.5 px-3.5 rounded-xl border text-xs font-semibold tactile-btn transition-all shrink-0 flex items-center justify-center gap-1.5 cursor-pointer ${
+              isExpanded
+                ? 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                : 'border-pink-300 bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 text-pink-700 shadow-2xs'
+            }`}
+            title={isExpanded ? 'Thu gọn mục tiêu tài chính' : 'Bật xem đầy đủ mục tiêu tài chính'}
           >
-            <span className="text-xs font-medium sm:hidden">{isExpanded ? 'Thu gọn' : 'Xem mục tiêu'}</span>
-            {isExpanded ? <CaretUp size={16} weight="bold" /> : <CaretDown size={16} weight="bold" />}
+            <span>{isExpanded ? 'Thu gọn' : 'Bật xem mục tiêu'}</span>
+            {isExpanded ? <CaretUp size={15} weight="bold" /> : <CaretDown size={15} weight="bold" />}
           </button>
         </div>
       </div>
 
-      {/* 2. Thanh Tiến Độ Tổng Thể (Overall Progress Pulse) */}
-      <div className="mt-3.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-pink-50/80 via-white to-amber-50/40 border border-pink-200/90 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Vòng tròn tiến độ Radial Donut trực quan */}
-          <div className="relative w-11 h-11 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center filter drop-shadow-2xs">
-            <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
-              {/* Vòng nền xám hồng nhẹ */}
-              <path
-                className="text-pink-100/90"
-                strokeWidth="3.2"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              {/* Vòng tiến độ gradient chuyển màu mượt mà */}
-              <path
-                stroke="url(#progressRingGradient)"
-                strokeWidth="3.2"
-                strokeDasharray={`${overallPercentage}, 100`}
-                strokeLinecap="round"
-                fill="none"
-                className="transition-all duration-1000 ease-out"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <defs>
-                <linearGradient id="progressRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#FB7185" />
-                  <stop offset="50%" stopColor="#F43F5E" />
-                  <stop offset="100%" stopColor="#F59E0B" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-              <span className="text-[11px] sm:text-xs font-black text-rose-600 tracking-tight font-sans flex items-baseline">
-                <span>{overallPercentage}</span>
-                <span className="text-[8px] font-bold opacity-80 ml-0.5">%</span>
-              </span>
-            </div>
-          </div>
-
-          <div className="min-w-0">
-            <div className="text-xs sm:text-[13px] font-bold text-slate-800 flex items-center gap-1.5 whitespace-nowrap">
-              <span>Tiến độ tích lũy toàn bộ</span>
-              <Sparkle size={13} weight="fill" className="text-amber-500 shrink-0" />
-            </div>
-            <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 whitespace-nowrap">
-              Đã có: <strong className="text-emerald-600 font-bold">{formatMoney(totalCurrent)}</strong> / Mục tiêu: <span className="font-semibold text-slate-700">{formatMoney(totalTarget)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Mini progress bar ngang kèm nhãn tỷ lệ */}
-        <div className="w-full sm:w-56 flex flex-col gap-1 shrink-0">
-          <div className="w-full bg-slate-100 rounded-full h-2.5 sm:h-3 border border-pink-200/80 p-0.5 shadow-inner">
-            <div 
-              className="h-full rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 transition-all duration-700 shadow-2xs"
-              style={{ width: `${Math.min(100, Math.max(3, overallPercentage))}%` }}
-            />
-          </div>
-          <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium px-0.5">
-            <span>0%</span>
-            <span className="font-semibold text-rose-500">{overallPercentage}% hoàn thành</span>
-            <span>100%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Danh Sách Thẻ Mục Tiêu (Grid Goal Cards) */}
+      {/* 2 & 3: Chỉ hiển thị đầy đủ khi bấm BẬT (isExpanded === true) */}
       {isExpanded && (
+        <div className="space-y-4 animate-fade-in">
+          {/* 2. Thanh Tiến Độ Tổng Thể (Overall Progress Pulse) */}
+          <div className="mt-3.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-pink-50/80 via-white to-amber-50/40 border border-pink-200/90 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              {/* Vòng tròn tiến độ Radial Donut trực quan */}
+              <div className="relative w-11 h-11 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center filter drop-shadow-2xs">
+                <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
+                  {/* Vòng nền xám hồng nhẹ */}
+                  <path
+                    className="text-pink-100/90"
+                    strokeWidth="3.2"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  {/* Vòng tiến độ gradient chuyển màu mượt mà */}
+                  <path
+                    stroke="url(#progressRingGradient)"
+                    strokeWidth="3.2"
+                    strokeDasharray={`${overallPercentage}, 100`}
+                    strokeLinecap="round"
+                    fill="none"
+                    className="transition-all duration-1000 ease-out"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <defs>
+                    <linearGradient id="progressRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#FB7185" />
+                      <stop offset="50%" stopColor="#F43F5E" />
+                      <stop offset="100%" stopColor="#F59E0B" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+                  <span className="text-[11px] sm:text-xs font-black text-rose-600 tracking-tight font-sans flex items-baseline">
+                    <span>{overallPercentage}</span>
+                    <span className="text-[8px] font-bold opacity-80 ml-0.5">%</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <div className="text-xs sm:text-[13px] font-bold text-slate-800 flex items-center gap-1.5 whitespace-nowrap">
+                  <span>Tiến độ tích lũy toàn bộ</span>
+                  <Sparkle size={13} weight="fill" className="text-amber-500 shrink-0" />
+                </div>
+                <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 whitespace-nowrap">
+                  Đã có: <strong className="text-emerald-600 font-bold">{formatMoney(totalCurrent)}</strong> / Mục tiêu: <span className="font-semibold text-slate-700">{formatMoney(totalTarget)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mini progress bar ngang kèm nhãn tỷ lệ */}
+            <div className="w-full sm:w-56 flex flex-col gap-1 shrink-0">
+              <div className="w-full bg-slate-100 rounded-full h-2.5 sm:h-3 border border-pink-200/80 p-0.5 shadow-inner">
+                <div 
+                  className="h-full rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 transition-all duration-700 shadow-2xs"
+                  style={{ width: `${Math.min(100, Math.max(3, overallPercentage))}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium px-0.5">
+                <span>0%</span>
+                <span className="font-semibold text-rose-500">{overallPercentage}% hoàn thành</span>
+                <span>100%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Danh Sách Thẻ Mục Tiêu (Grid Goal Cards) */}
         <div className="mt-4">
           {goals.length === 0 ? (
             <div className="py-8 text-center rounded-2xl border-2 border-dashed border-pink-200/80 bg-pink-50/30">
               <div className="w-12 h-12 rounded-full bg-pink-100 text-pink-500 flex items-center justify-center mx-auto mb-2">
                 <Target size={24} weight="duotone" />
               </div>
-              <h4 className="font-bold text-slate-700 text-sm">Chưa có mục tiêu nào được tạo</h4>
+              <h4 className="font-bold text-slate-700 text-sm">Chưa có mục tiêu nào trong {currentMonthLabel}</h4>
               <p className="text-xs text-slate-400 mt-0.5 max-w-sm mx-auto">
-                Cùng nhau lên kế hoạch cho các dự định lớn như du lịch, sửa nhà, mua sắm nhé 💕
+                Mỗi tháng có mục tiêu tài chính riêng. Cùng nhau lên kế hoạch cho các dự định của {currentMonthLabel} nhé 💕
               </p>
               <button
                 type="button"
                 onClick={handleOpenCreateGoal}
-                className="mt-3 px-4 py-2 rounded-xl bg-pink-500 text-white font-bold text-xs shadow-xs hover:bg-pink-600 inline-flex items-center gap-1.5 tactile-btn"
+                className="mt-3 px-4 py-2 rounded-xl bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs shadow-xs inline-flex items-center gap-1.5 tactile-btn cursor-pointer"
               >
-                <Plus size={14} weight="bold" /> Thêm mục tiêu đầu tiên
+                <Plus size={14} weight="bold" /> Thêm mục tiêu {currentMonthLabel}
               </button>
             </div>
           ) : (
@@ -661,6 +721,7 @@ export default function SavingsGoalsSection({
               })}
             </div>
           )}
+        </div>
         </div>
       )}
 
@@ -819,7 +880,7 @@ export default function SavingsGoalsSection({
                   <Target size={18} weight="bold" />
                 </div>
                 <h4 className="font-bold text-slate-800 text-sm">
-                  {goalModal.isEdit ? 'Chỉnh Sửa Mục Tiêu' : 'Thêm Mục Tiêu Mới Cho Gia Đình'}
+                  {goalModal.isEdit ? `Chỉnh Sửa Mục Tiêu (${currentMonthLabel})` : `Thêm Mục Tiêu Mới Cho ${currentMonthLabel}`}
                 </h4>
               </div>
               <button 
@@ -832,6 +893,18 @@ export default function SavingsGoalsSection({
 
             <form onSubmit={handleSaveGoal} className="p-5 space-y-3.5 overflow-y-auto">
               
+              {/* Thông tin tháng áp dụng */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Áp dụng cho tháng:</span>
+                  <span className="text-[11px] font-bold text-pink-600">{currentMonthLabel}</span>
+                </label>
+                <div className="px-3.5 py-2 text-xs rounded-xl border border-pink-200/80 bg-pink-50/50 text-slate-800 font-medium flex items-center gap-2">
+                  <Calendar size={15} className="text-pink-600 shrink-0" weight="bold" />
+                  <span>Mục tiêu này sẽ được tính và lưu riêng cho <strong>{currentMonthLabel}</strong></span>
+                </div>
+              </div>
+
               {/* Tên mục tiêu */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">

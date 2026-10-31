@@ -182,18 +182,31 @@ export default function App() {
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
 
-  // Danh sách mục tiêu tiết kiệm: Lưu và đọc trực tiếp từ Supabase
+  // Danh sách mục tiêu tiết kiệm: Lưu và đọc trực tiếp từ Supabase (gắn theo từng tháng)
   const [goals, setGoals] = useState(() => {
     try {
       const saved = localStorage.getItem('nt_family_savings_goals');
-      return saved ? JSON.parse(saved) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map(g => ({
+            ...g,
+            month: g.month || (g.deadline ? g.deadline.slice(0, 7) : '2026-10')
+          }));
+        }
+      }
+      return [];
     } catch (e) {
       return [];
     }
   });
 
   const handleAddGoal = async (newGoal) => {
-    const updated = [newGoal, ...goals];
+    const goalWithMonth = {
+      ...newGoal,
+      month: newGoal.month || currentMonth || '2026-10'
+    };
+    const updated = [goalWithMonth, ...goals];
     setGoals(updated);
     try {
       localStorage.setItem('nt_family_savings_goals', JSON.stringify(updated));
@@ -201,7 +214,7 @@ export default function App() {
 
     if (isSupabaseConfigured) {
       try {
-        await upsertSavingsGoal(newGoal, updated);
+        await upsertSavingsGoal(goalWithMonth, updated);
       } catch (err) {
         console.error('Lỗi lưu mục tiêu vào Supabase:', err);
       }
@@ -209,7 +222,11 @@ export default function App() {
   };
 
   const handleUpdateGoal = async (updatedGoal) => {
-    const updated = goals.map((g) => (g.id === updatedGoal.id ? updatedGoal : g));
+    const goalWithMonth = {
+      ...updatedGoal,
+      month: updatedGoal.month || currentMonth || '2026-10'
+    };
+    const updated = goals.map((g) => (g.id === updatedGoal.id ? goalWithMonth : g));
     setGoals(updated);
     try {
       localStorage.setItem('nt_family_savings_goals', JSON.stringify(updated));
@@ -217,7 +234,7 @@ export default function App() {
 
     if (isSupabaseConfigured) {
       try {
-        await upsertSavingsGoal(updatedGoal, updated);
+        await upsertSavingsGoal(goalWithMonth, updated);
       } catch (err) {
         console.error('Lỗi cập nhật mục tiêu vào Supabase:', err);
       }
@@ -1058,16 +1075,31 @@ export default function App() {
 
       {/* Nội dung chính: Khoảng trắng giữa tất cả các phần đều tăm tắp (space-y-3) */}
       <main className="space-y-3 pt-3">
-        {/* Thông báo dạng card mỗi ngày khi chưa điền thu chi ngày đó */}
+        {/* 1. Thông báo gọn nhỏ mỗi ngày khi chưa điền thu chi ngày đó */}
         <DailyReminderCard
           transactions={transactions}
           onOpenAddTransaction={handleOpenAddTx}
           onShowToast={showToast}
         />
 
-        {/* Section Mục Tiêu Tài Chính Gia Đình (Nằm dưới Nhắc Nhở) */}
+        {/* 2. Thêm thu chi lên đầu tiên dưới phần thông báo (Nút Thêm thu chi mới + Thêm nhanh 1 chạm) */}
+        <QuickEntry
+          onAddTransaction={handleAddTransaction}
+          onOpenAddTransaction={handleOpenAddTx}
+          activeUser={activeUser}
+          activeVault={activeVault}
+          onShowToast={showToast}
+          categories={categories}
+          macroTypes={macroTypes}
+          members={members}
+          currentMonth={currentMonth}
+        />
+
+        {/* 3. Section Mục Tiêu Tài Chính Tháng (Ăn theo tháng, mặc định thu gọn, khi nào bấm bật thì mới full ra) */}
         <SavingsGoalsSection
           goals={goals}
+          currentMonth={currentMonth}
+          availableMonths={availableMonths}
           onAddGoal={handleAddGoal}
           onUpdateGoal={handleUpdateGoal}
           onDeleteGoal={handleDeleteGoal}
@@ -1077,7 +1109,7 @@ export default function App() {
           onShowToast={showToast}
         />
 
-        {/* Tổng quan tháng & ghi chú riêng của tháng */}
+        {/* 4. Tổng quan tháng & ghi chú riêng của tháng */}
         <BudgetPulse
           transactions={currentMonthTransactions}
           currentMonth={currentMonth}
@@ -1092,7 +1124,7 @@ export default function App() {
           onUpdateFunds={handleUpdateFunds}
         />
 
-        {/* Biểu đồ cơ cấu chi tiêu & thu nhập (hỗ trợ chuyển đổi Tròn/Cột & Lọc tháng) */}
+        {/* 5. Biểu đồ cơ cấu chi tiêu & thu nhập (hỗ trợ chuyển đổi Tròn/Cột & Lọc tháng) */}
         <CategoryPieChart
           transactions={transactions}
           privacyMode={privacyMode}
@@ -1101,19 +1133,7 @@ export default function App() {
           onChangeMonth={setCurrentMonth}
         />
 
-        {/* Khối nhập liệu nhanh gọn */}
-        <QuickEntry
-          onAddTransaction={handleAddTransaction}
-          activeUser={activeUser}
-          activeVault={activeVault}
-          onShowToast={showToast}
-          categories={categories}
-          macroTypes={macroTypes}
-          members={members}
-          currentMonth={currentMonth}
-        />
-
-        {/* Bảng sổ kế toán chuẩn Google Sheets */}
+        {/* 6. Bảng sổ kế toán chuẩn Google Sheets */}
         <TransactionList
           transactions={transactions}
           currentMonth={currentMonth}

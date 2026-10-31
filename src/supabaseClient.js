@@ -412,6 +412,7 @@ export async function getSavingsGoals() {
         color: row.color || 'emerald',
         category: meta.category || 'Gia đình',
         deadline: meta.deadline || '',
+        month: meta.month || row.month || (row.created_at ? row.created_at.slice(0, 7) : '2026-10'),
         history: Array.isArray(meta.history) ? meta.history : []
       };
     });
@@ -429,6 +430,7 @@ export async function saveSavingsGoalsMeta(goals = []) {
       metaMap[g.id] = {
         category: g.category || 'Gia đình',
         deadline: g.deadline || '',
+        month: g.month || '2026-10',
         history: g.history || []
       };
     });
@@ -475,6 +477,7 @@ export async function upsertSavingsGoal(goal, allGoals = null) {
     metaMap[goal.id] = {
       category: goal.category || 'Gia đình',
       deadline: goal.deadline || '',
+      month: goal.month || '2026-10',
       history: goal.history || []
     };
     await supabase.from('monthly_config').upsert({

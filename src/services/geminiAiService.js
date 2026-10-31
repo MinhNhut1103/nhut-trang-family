@@ -387,9 +387,9 @@ function buildSystemPrompt(contextData) {
     `  • ${s.name}: Đã chi ${new Intl.NumberFormat('vi-VN').format(s.chi || 0)} đ, Thu ${new Intl.NumberFormat('vi-VN').format(s.thu || 0)} đ (${s.count || 0} giao dịch)`
   );
 
-  // Mục tiêu tích lũy
+  // Mục tiêu tích lũy (theo từng tháng)
   const goalLines = (goals || []).map(g =>
-    `  • Mục tiêu "${g.title}": Đã có ${new Intl.NumberFormat('vi-VN').format(g.current || 0)} đ / ${new Intl.NumberFormat('vi-VN').format(g.target || 0)} đ (${Math.round(((g.current || 0) / (g.target || 1)) * 100)}%) | Phân loại: ${g.category || 'Gia đình'}${g.deadline ? ` | Hạn chót: ${g.deadline}` : ''}`
+    `  • Mục tiêu "${g.title}" (Tháng ${g.month || '2026-10'}): Đã có ${new Intl.NumberFormat('vi-VN').format(g.current || 0)} đ / ${new Intl.NumberFormat('vi-VN').format(g.target || 0)} đ (${Math.round(((g.current || 0) / (g.target || 1)) * 100)}%) | Phân loại: ${g.category || 'Gia đình'}${g.deadline ? ` | Hạn chót: ${g.deadline}` : ''}`
   );
 
   // Lịch sử các tháng

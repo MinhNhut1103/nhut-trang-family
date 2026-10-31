@@ -4,6 +4,7 @@ import { categoriesList, macroTypesList, getCurrentTime, formatDateDisplay } fro
 
 export default function QuickEntry({ 
   onAddTransaction, 
+  onOpenAddTransaction,
   activeUser, 
   activeVault,
   onShowToast,
@@ -142,22 +143,36 @@ export default function QuickEntry({
   };
 
   return (
-    <section className="w-full max-w-5xl mx-auto px-4 md:px-8">
-      <div className="card-soft p-3.5 sm:p-4">
+    <section id="add-transaction-section" className="w-full max-w-5xl mx-auto px-4 md:px-8 animate-fade-in scroll-mt-20">
+      <div className="card-soft p-3 sm:p-4 bg-white border border-pink-200/90 shadow-xs shadow-pink-100/30 space-y-3">
         
+        {/* Nút hành động chính: Thêm thu chi mới to rõ, nổi bật */}
+        <div className="w-full">
+          <button
+            id="btn-add-transaction"
+            type="button"
+            onClick={() => onOpenAddTransaction && onOpenAddTransaction()}
+            className="w-full py-2.5 sm:py-3 px-4 bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white rounded-xl text-sm sm:text-base font-bold flex items-center justify-center gap-2 shadow-xs transition-all tactile-btn cursor-pointer"
+            title="Thêm khoản thu chi mới vào sổ"
+          >
+            <Plus size={18} weight="bold" />
+            <span>Thêm thu chi mới</span>
+          </button>
+        </div>
+
         {/* Nút bấm nhanh thường dùng */}
-        <div className="flex flex-col gap-2.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <span className="text-xs font-bold text-slate-800">
-              Thêm nhanh thường dùng:
+        <div className="pt-2 border-t border-pink-100/80 flex flex-col gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-700 flex items-center gap-1">
+              <span>Mục chi thường dùng (nhập 1 chạm):</span>
             </span>
             <button
               type="button"
               onClick={() => setIsAddingPreset(true)}
-              className="self-start sm:self-auto text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors tactile-btn shadow-2xs"
+              className="self-start sm:self-auto text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors tactile-btn shadow-2xs cursor-pointer"
               title="Tự tạo mục chi tiêu thường dùng"
             >
-              <Plus size={13} weight="bold" />
+              <Plus size={12} weight="bold" />
               <span>Thêm mục</span>
             </button>
           </div>
